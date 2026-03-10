@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Edit Milk{% else %}Add New Milk{% endif %}
+{% endblock %}
+
+{% block page %}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap');
+
+.welcome {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 300;       /* bold and clean */
+    font-size: 1.8rem;      /* strong title size */
+    letter-spacing: 1px;    /* small spacing for modern look */
+    color: #000000;         /* modern blue tone */
+}
+</style>
+
+
+    <h5 class="text-center">
+        <span class="welcome">Welcome: {{user.username}}</span> 
+    </h5>
+{% endblock %}
+

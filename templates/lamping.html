@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Edit Milk{% else %}Add New Milk{% endif %}
+{% endblock %}
+
+{% block page %}
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<div class="container text-center">
+    <div class="row">
+
+        <!-- TABLE -->
+        <div class="col-8">
+        <div class="card shadow-sm">
+            <div class="card-body">
+            <div id="example-table"></div>
+            </div>
+        </div>
+        </div>
+
+        <!-- FORM
+        <div class="card-body">
+        -->
+        <div class="col-4">
+            <div class="card shadow-sm mt-3 mt-md-0">
+                <div class="card-header bg-success text-white">
+                    <h4 class="mb-0">Birth Event</h4>
+                </div>
+                <div class="card-body">
+                    <div id="app">
+                        <birth-event-form></birth-event-form>
+                    </div>
+
+                    <script>
+                        const BirthEventForm = {
+                        template: `
+                            <form @submit.prevent="handleSubmit" id="birthevent-form">
+
+                            <!-- Mother -->
+                            <div class="mb-3">
+                                <label class="form-label">Sheep ID</label>
+                                <input
+                                v-model="form.mother"
+                                type="text"
+                                class="form-control"
+                                name="mother"
+                                placeholder="Sheep ID"
+                                />
+                            </div>
+
+                            <!-- Lambs -->
+                            <div>
+                                <div class="mb-2" v-for="(lamb, index) in form.lambs" :key="index">
+                                <input
+                                    v-model="form.lambs[index]"
+                                    type="text"
+                                    class="form-control"
+                                    name="lambs"
+                                    placeholder="Lamb ID"
+                                />
+                                </div>
+                            </div>
+
+                            <button type="button" class="btn btn-secondary mb-3" @click="addLambField">
+                                + Add Another
+                            </button>
+
+                            <!-- Date -->
+                            <div class="mb-3">
+                                <label class="form-label">Birthdate</label>
+                                <input
+                                v-model="form.date"
+                                type="date"
+                                class="form-control"
+                                name="date"
+                                />
+                            </div>
+
+                            <div class="d-flex justify-content-end">
+                                <button type="submit" class="btn btn-success px-4">Save Event</button>
+                            </div>
+
+                            </form>
+                        `,
+
+                        data() {
+                            return {
+                            form: {
+                                mother: "",
+                                lambs: [""],
+                                date: "",
+                            },
+                            };
+                        },
+
+                        methods: {
+                            addLambField() {
+                            this.form.lambs.push("");
+                            },
+
+                            async handleSubmit() {
+                            // Get CSRF from Django template
+                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
+
+                            // POST directly with Vue data
+                            const response = await fetch("{% url 'birthevent-data-api' %}", {
+                                method: "POST",
+                                headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRFToken": csrfToken
+                                },
+                                body: JSON.stringify(this.form)
+                            });
+
+                            if (response.ok) {
+                                const data = await response.json();
+
+                                // Add row to Tabulator
+                                table.updateOrAddData([data]);
+
+                                // Reset form
+                                this.form = {
+                                mother: "",
+                                lambs: [""],
+                                date: "",
+                                };
+
+                                console.log("New row added:", data);
+
+                            } else {
+                                const errors = await response.json();
+                                alert("Error: " + JSON.stringify(errors));
+                            }
+                            }
+                        }
+                        };
+
+                        document.addEventListener("DOMContentLoaded", function () {
+                        const app = Vue.createApp({});
+                        app.component("birth-event-form", BirthEventForm);
+                        app.mount("#app");
+                        });
+                    </script>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+
+    var table = new Tabulator("#example-table", {
+    ajaxURL: "/api/birthevent/",
+    layout:"fitColumns",      //fit columns to width of table
+    responsiveLayout:"hide",  //hide columns that don't fit on the table
+    addRowPos:"top",          //when adding a new row, add it to the top of the table
+    history:true,             //allow undo and redo actions on the table
+    pagination:"local",       //paginate the data
+    paginationSize:10,         //allow 100 rows per page of data
+    paginationCounter:"rows", //display count of paginated rows in footer
+    movableColumns:true,      //allow column order to be changed
+    initialSort:[             //set the initial sort order of the data
+        {column:"name", dir:"asc"},
+    ],
+    columnDefaults:{
+        tooltip:true,         //show tool tips on cells
+    },
+    columns:[                 //define the table columns
+        {title:"Mother Earing", field:"mother"},
+        {title: "Birthdate",field: "date", sorter:"date"},
+        {title: "Lambs", field: "lambs"},
+    ],
+    });
+</script>
+
+
+
+
+
+{% endblock %}

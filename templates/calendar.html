@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{% if form.instance.pk %}Edit Milk{% else %}Add New Milk{% endif %}
+{% endblock %}
+
+{% block page %}
+<style>
+.fc a {
+  color: inherit;
+  text-decoration: none;
+}
+
+#calendar {
+  max-width: 1100px;
+  margin: 40px auto;
+}
+</style>
+
+<div class="calendar-page">
+  <div class="card shadow">
+    <div class="card-body">
+      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createEventModal">
+        Create Event
+      </button>
+      <div id="calendar"></div>
+    </div>
+  </div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="createEventModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="createEventForm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="start" class="form-label">Start Date</label>
+            <input type="date" class="form-control" id="start" name="start" required>
+          </div>
+
+          <div class="mb-3">
+            <label for="end" class="form-label">End Date & Time</label>
+            <input type="datetime-local" class="form-control" id="end" name="end">
+          </div>
+
+          <div class="mb-3">
+            <label for="group_id" class="form-label">Group ID</label>
+            <input type="text" class="form-control" id="group_id" name="group_id">
+          </div>
+
+          <div class="mb-3">
+            <label for="color" class="form-label">Color</label>
+            <input type="text" class="form-control" id="color" name="color">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Create Event</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+  var calendarEl = document.getElementById('calendar');
+
+  window.calendar = new FullCalendar.Calendar(calendarEl, {
+    height: 'auto',
+    timeZone: 'UTC',
+    initialView: 'dayGridMonth',
+    events: '/calendar/api/calendar/',
+    editable: true,
+    selectable: true,
+    themeSystem: 'bootstrap5'
+  });
+
+  calendar.render();
+});
+
+document.getElementById('createEventForm').addEventListener('submit', function(e){
+    e.preventDefault(); // prevent full page reload
+
+    const formData = {
+        title: document.getElementById('title').value,
+        start: document.getElementById('start').value,
+        end: document.getElementById('end').value || null,
+        group_id: document.getElementById('group_id').value,
+        color: document.getElementById('color').value
+    };
+
+    fetch('/api/calendar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Failed to create event');
+        return res.json();
+    })
+    .then(data => {
+        console.log('Event created:', data);
+
+        // close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('createEventModal'));
+        modal.hide();
+
+        // reset form
+        document.getElementById('createEventForm').reset();
+        window.calendar.addEvent({
+          id: data.id,
+          title: data.title,
+          start: data.start,
+          end: data.end || undefined,  // convert null to undefined
+          color: data.color
+        });
+        // optionally: refresh table/calendar here
+        // e.g., call your Tabulator redraw or FullCalendar refetchEvents
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Error creating event');
+    });
+});
+
+</script>
+
+
+
+{% endblock %}
