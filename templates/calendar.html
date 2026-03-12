@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}
-{% if form.instance.pk %}Edit Milk{% else %}Add New Milk{% endif %}
-{% endblock %}
+
 
 {% block page %}
 <style>
@@ -81,7 +79,7 @@
     height: 'auto',
     timeZone: 'UTC',
     initialView: 'dayGridMonth',
-    events: '/calendar/api/calendar/',
+    events: '/api/calendar/',
     editable: true,
     selectable: true,
     themeSystem: 'bootstrap5'

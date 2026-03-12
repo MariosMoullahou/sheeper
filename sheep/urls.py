@@ -20,12 +20,6 @@ from sheepfold import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("", include("sheepfold.urls")),
-    path("", views.homepage, name="homepage"),
-    path("<int:pk>/", views.sheep_detail, name="sheep_detail"),
-    path("new/", views.sheep_create, name="sheep_create"),
-    path("lamping/",views.lamping, name="lamping"),
-    path("milking/", views.milking, name="milking"),
     path('', include('accounts.urls')),
-    path('calendar/api/calendar/', views.calendar_data_api, name='calendar-api'),
+    path("", include("sheepfold.urls")),
 ]

@@ -1,47 +1,81 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 
+
 class Sheep(models.Model):
-    earing = models.CharField(max_length=100,primary_key=True)
-    birthdate = models.DateField(null=True)
-    gender_choices = [
+    GENDER_CHOICES = [
         ('M', 'Male'),
         ('F', 'Female'),
     ]
-    gender = models.CharField(max_length=1, choices=gender_choices, default='U')
-    mother = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='children')
+
+    farm = models.ForeignKey(
+        'accounts.Farm',
+        on_delete=models.CASCADE,
+        related_name='sheep',
+    )
+    earing = models.CharField(max_length=100)
+    birthdate = models.DateField(null=True, blank=True)
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, default='U')
+    mother = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='children',
+    )
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ['farm', 'earing']
+
+    def clean(self):
+        if self.mother and self.mother.gender == 'M':
+            raise ValidationError({'mother': 'Mother must be female.'})
 
     def __str__(self):
         return self.earing
-    
+
+
 class BirthEvent(models.Model):
     mother = models.ForeignKey(Sheep, on_delete=models.CASCADE, related_name='birth_events')
     date = models.DateField()
     notes = models.TextField(blank=True)
     lambs = models.ManyToManyField(Sheep, related_name='birth_event', blank=True)
 
+    def clean(self):
+        if self.mother and self.mother.gender == 'M':
+            raise ValidationError({'mother': 'Mother must be female.'})
+
     def __str__(self):
         return f"Birth by {self.mother.earing} on {self.date}"
-    
+
+
 class Milk(models.Model):
     sheep = models.ForeignKey(
         Sheep,
         on_delete=models.CASCADE,
-        related_name="milk"
+        related_name='milk',
     )
-    date = models.DateField(auto_now_add=True)
+    date = models.DateField(default=timezone.localdate)
     milk = models.DecimalField(max_digits=5, decimal_places=2, help_text="liter")
-    
+    is_active = models.BooleanField(default=True)
+
     def __str__(self):
         return f"{self.sheep.earing} - {self.date} ({self.milk} liter)"
 
+
 class CalendarEvent(models.Model):
-    title =models.CharField(max_length=255)
+    farm = models.ForeignKey(
+        'accounts.Farm',
+        on_delete=models.CASCADE,
+        related_name='calendar_events',
+    )
+    title = models.CharField(max_length=255)
     start = models.DateField()
     end = models.DateTimeField(null=True, blank=True)
-    group_id = models.CharField(
-        max_length=100,
-        blank=True,
-        db_index=True
-    )
+    group_id = models.CharField(max_length=100, blank=True, db_index=True)
     color = models.CharField(max_length=50, blank=True)
+
+    def __str__(self):
+        return self.title

@@ -1,0 +1,129 @@
+SHEEPER PROJECT — CODE REVIEW
+==============================
+Date: 2026-03-12
+Reviewed by: Claude Opus 4.6
+
+================================================================================
+CRITICAL BUGS
+================================================================================
+
+1. Typo in serializer — "fieds" instead of "fields"
+   File: sheepfold/serializers.py (CreateSheep class)
+   Issue: fieds = '__all__' — DRF silently ignores this, breaking serialization.
+   Fix: Rename to fields = '__all__'
+
+2. BirthEventSerializer references non-existent field "earing"
+   File: sheepfold/serializers.py (BirthEventSerializer class)
+   Issue: fields = ["earing", "mother", "date", "lambs"]
+          "earing" belongs to Sheep, not BirthEvent. Will crash at runtime.
+   Fix: Replace "earing" with "id" or remove it.
+
+3. Lamping view uses removed "name" field
+   File: sheepfold/views.py (~line 100)
+   Issue: lamb = Sheep.objects.create(name=name,)
+          The "name" field was removed in migration 0002. This crashes when
+          creating lambs.
+   Fix: Use "earing" instead of "name".
+
+4. Wrong calendar API URL in template
+   File: templates/calendar.html (~line 84)
+   Issue: events: '/calendar/api/calendar/' — should be '/api/calendar/'
+   Fix: Change to '/api/calendar/' or use Django {% url %} tag.
+
+================================================================================
+SECURITY CONCERNS
+================================================================================
+
+5. No CSRF protection on API endpoints
+   AJAX calls in templates don't consistently pass CSRF tokens when posting
+   to API views. This can cause 403 errors or leave endpoints unprotected.
+
+6. No permission/authorization system
+   Any authenticated user can access all sheep data. No per-user or per-farm
+   data isolation exists.
+
+7. No input validation in lamping view
+   Mother/lamb IDs are not validated before database operations, risking
+   integrity errors or crashes.
+
+8. Hardcoded URLs in JavaScript
+   API URLs are hardcoded strings (e.g., '/api/milk/') instead of using
+   {% url %} template tags. Fragile to URL changes.
+
+================================================================================
+DESIGN & CONSISTENCY ISSUES
+================================================================================
+
+9. Inconsistent frontend framework
+   lamping.html uses Vue 3, while all other templates use vanilla JS.
+   Should standardize on one approach.
+
+10. sheep_detail.html doesn't extend base.html
+    It's a standalone template, so users lose the sidebar navigation when
+    viewing sheep details.
+
+11. No database-level pagination
+    Views return Model.objects.all() with no pagination. Tabulator sets
+    paginationSize=10 client-side, but all records are fetched at once.
+    This won't scale with large datasets.
+
+12. MilkSerializer has "date" as read-only
+    The Milk model now uses default=timezone.localdate instead of
+    auto_now_add, but the serializer still marks date as read-only.
+    Users may want to set custom dates.
+
+13. Homepage is empty
+    templates/homepage.html only shows "Welcome: username" with no sheep
+    data, despite the view passing sheep context.
+
+================================================================================
+MISSING FUNCTIONALITY
+================================================================================
+
+14. No update/delete operations
+    Only create (POST) and list (GET) exist for all models.
+    No PUT, PATCH, or DELETE endpoints.
+
+15. No model validation
+    A male sheep can be set as a "mother". No business logic constraints
+    enforce gender rules.
+
+16. No tests
+    tests.py files exist in both apps but are completely empty.
+
+17. No logging configured anywhere in the project.
+
+================================================================================
+MINOR ISSUES
+================================================================================
+
+18. Duplicate dotenv packages in requirements.txt
+    Both dotenv==0.9.9 and python-dotenv==1.2.1 are listed.
+    Only python-dotenv is needed.
+
+19. Sidebar "Milk Analysis" link points to homepage
+    Not a dedicated analysis page.
+
+20. Missing static assets
+    Sidebar references /static/img/head.png but no static directory is
+    present in the repository.
+
+================================================================================
+RECOMMENDED PRIORITY FIXES
+================================================================================
+
+P0 (Fix immediately):
+  - Fix "fieds" typo in serializer                          (~1 min)
+  - Fix BirthEventSerializer field list                     (~2 min)
+  - Fix "name" -> "earing" in lamping view                  (~5 min)
+  - Fix calendar API URL in template                        (~1 min)
+
+P1 (Fix soon):
+  - Add CSRF tokens to all AJAX calls                       (~30 min)
+  - Make sheep_detail.html extend base.html                 (~15 min)
+  - Add server-side pagination to API views                 (~1 hr)
+
+P2 (Plan for next iteration):
+  - Add model validation (mother must be female)            (~30 min)
+  - Standardize frontend framework (Vue or vanilla JS)      (~2-3 hr)
+  - Add basic tests for models, views, and APIs             (~2-3 hr)

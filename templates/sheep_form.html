@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}
-{% if form.instance.pk %}Edit Milk{% else %}Add New Milk{% endif %}
-{% endblock %}
+
 
 {% block page %}
 <div class="container text-center">
@@ -140,23 +138,33 @@
     },
     columns:[                 //define the table columns
         {title: "Earing", field: "earing"},
-        {title: "Birthdate",field: "birthdate", sorter:"date"},
+        {title: "Birthdate", field: "birthdate", sorter:"date"},
         {title: "Gender", field: "gender"},
         {title: "Mother", field: "mother"},
+        {title: "Active", field: "is_active", formatter:"tickCross", width: 80, hozAlign: "center"},
         {
-          title: "Data",
-          formatter: (cell, formatterParams) => {
-              return `<button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
-                        Info
-                      </button>`;
-          },
-          width: 120,
+          title: "",
+          formatter: () => '<button class="btn btn-sm btn-outline-danger">Delete</button>',
+          width: 90,
           hozAlign: "center",
-          cellClick: (e, cell) => {
+          headerSort: false,
+          cellClick: async (e, cell) => {
               const rowData = cell.getRow().getData();
-              console.log("Edit clicked:", rowData);
+              if (!confirm(`Are you sure you want to delete sheep "${rowData.earing}"?`)) return;
+
+              const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+              const response = await fetch(`/api/sheep/${rowData.id}/`, {
+                  method: "DELETE",
+                  headers: { "X-CSRFToken": csrfToken }
+              });
+
+              if (response.ok) {
+                  cell.getRow().delete();
+              } else {
+                  alert("Failed to delete sheep.");
+              }
           }
-        }   
+        }
     ],
     });
 </script>    

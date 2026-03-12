@@ -65,6 +65,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'accounts.context_processors.active_farm',
             ],
         },
     },
@@ -119,6 +120,7 @@ USE_I18N = True
 USE_TZ = True
 
 LOGIN_URL = 'login'
+LOGIN_REDIRECT_URL = 'select_farm'
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/

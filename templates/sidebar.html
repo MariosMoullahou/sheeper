@@ -3,10 +3,10 @@
 
 .sheeper-brand {
     font-family: 'Poppins', sans-serif;
-    font-weight: 400;       /* bold and clean */
-    font-size: 1.8rem;      /* strong title size */
-    letter-spacing: 1px;    /* small spacing for modern look */
-    color: #001f47;         /* modern blue tone */
+    font-weight: 400;
+    font-size: 1.8rem;
+    letter-spacing: 1px;
+    color: #001f47;
 }
 
 .nav-link.active {
@@ -23,20 +23,27 @@
     </h4>
 
     <ul class="nav flex-column gap-2">
+        {% if user_role == 'farmer' or user_role == 'manager' or request.user.is_superuser %}
         <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}" 
+            <a class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}"
                href="{% url 'homepage' %}">
                 <i class="bi bi-house-door-fill me-2"></i> Home
             </a>
         </li>
+        {% endif %}
+
+        {% if user_role == 'analyst' or user_role == 'manager' or request.user.is_superuser %}
         <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.url_name == 'Milk analysis' %}active{% endif %}" 
+            <a class="nav-link {% if request.resolver_match.url_name == 'milk_analysis' %}active{% endif %}"
                href="{% url 'homepage' %}">
                 <i class="bi bi-clipboard2-data-fill me-2"></i> Milk Analysis
             </a>
         </li>
+        {% endif %}
+
+        {% if user_role == 'farmer' or user_role == 'manager' or request.user.is_superuser %}
         <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.url_name == 'sheep_create' %}active{% endif %}" 
+            <a class="nav-link {% if request.resolver_match.url_name == 'sheep_create' %}active{% endif %}"
                href="{% url 'sheep_create' %}">
                 <i class="bi bi-plus-circle-fill me-2"></i> Sheeps
             </a>
@@ -48,21 +55,37 @@
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.url_name == 'lamping' %}active{% endif %}" 
+            <a class="nav-link {% if request.resolver_match.url_name == 'lamping' %}active{% endif %}"
                href="{% url 'lamping' %}">
                 <i class="bi bi-lightning-fill me-2"></i> Lamping
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link {% if request.resolver_match.url_name == 'milking' %}active{% endif %}" 
+            <a class="nav-link {% if request.resolver_match.url_name == 'milking' %}active{% endif %}"
                href="{% url 'milking' %}">
                 <i class="bi bi-bucket me-2"></i> Milking
             </a>
         </li>
+        {% endif %}
     </ul>
 
     {% if request.user.is_authenticated %}
-    <div class="mt-auto mb-2 text-center">
+    <div class="mt-auto mb-2">
+        {% if farm %}
+        <div class="text-center mb-2">
+            <small class="text-muted">
+                <i class="bi bi-building me-1"></i> {{ farm.name }}
+            </small>
+            <br>
+            <a href="{% url 'switch_farm' %}" class="small text-decoration-none">Switch farm</a>
+        </div>
+        {% endif %}
+        <div class="text-center mb-2">
+            <small class="text-muted">
+                <i class="bi bi-person me-1"></i> {{ request.user.username }}
+                <span class="badge bg-secondary">{{ user_role|title }}</span>
+            </small>
+        </div>
         <form method="POST" action="{% url 'logout' %}">
             {% csrf_token %}
             <button type="submit" class="btn btn-outline-danger w-100">
@@ -71,7 +94,6 @@
         </form>
     </div>
     {% endif %}
-
 
     <div class="mt-2 text-center">
         <small class="text-muted">© 2025 Sheep Farm</small>
