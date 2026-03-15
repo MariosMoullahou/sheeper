@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -28,8 +29,64 @@ def homepage(request):
     farm = _require_farm(request)
     if farm is None:
         return redirect('select_farm')
+
     sheep = Sheep.objects.filter(farm=farm)
-    return render(request, "homepage.html", {"sheep": sheep, "farm": farm})
+    today = timezone.localdate()
+
+    # Recent activity: last 10 items across sheep, milk, birth events
+    recent_sheep = (
+        Sheep.objects.filter(farm=farm)
+        .order_by('-id')[:10]
+        .values_list('earing', 'id')
+    )
+    recent_milk = (
+        Milk.objects.filter(sheep__farm=farm)
+        .select_related('sheep')
+        .order_by('-id')[:10]
+    )
+    recent_births = (
+        BirthEvent.objects.filter(mother__farm=farm)
+        .select_related('mother')
+        .order_by('-id')[:10]
+    )
+
+    activity = []
+    for earing, sid in recent_sheep:
+        activity.append({
+            'icon': 'bi-plus-circle-fill',
+            'color': 'var(--green-500)',
+            'text': f'Sheep #{earing} added',
+            'type': 'sheep',
+        })
+    for m in recent_milk:
+        activity.append({
+            'icon': 'bi-droplet-fill',
+            'color': '#3b82f6',
+            'text': f'Milk recorded for #{m.sheep.earing} — {m.milk}L on {m.date}',
+            'type': 'milk',
+        })
+    for b in recent_births:
+        lamb_count = b.lambs.count()
+        activity.append({
+            'icon': 'bi-lightning-fill',
+            'color': '#f59e0b',
+            'text': f'Birth event: #{b.mother.earing} — {lamb_count} lamb(s) on {b.date}',
+            'type': 'birth',
+        })
+    activity = activity[:10]
+
+    # Upcoming calendar events (next 5)
+    upcoming_events = (
+        CalendarEvent.objects.filter(farm=farm, start__gte=today)
+        .order_by('start')[:5]
+    )
+
+    return render(request, "homepage.html", {
+        "sheep": sheep,
+        "farm": farm,
+        "activity": activity,
+        "upcoming_events": upcoming_events,
+    })
 
 
 @login_required(login_url='login')
