@@ -2,20 +2,78 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% load static %}
     <link rel="icon" type="image/png" href="{% static 'img/head.png' %}">
-    <title>Sheeper - Select Farm</title>
+    <title>Sheeper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #14532d 0%, #166534 40%, #22c55e 100%);
+            min-height: 100vh;
+        }
+        .farm-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .sheeper-brand {
+            font-weight: 700;
+            font-size: 2rem;
+            color: #166534;
+        }
+        .btn-continue {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border: none;
+            padding: 0.65rem;
+            font-weight: 500;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-continue:hover {
+            background: linear-gradient(135deg, #15803d, #14532d);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.4);
+        }
+        .list-group-item {
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px !important;
+            margin-bottom: 6px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .list-group-item:hover {
+            border-color: #4ade80;
+            background-color: #f0fdf4;
+        }
+        .list-group-item:has(input:checked) {
+            border-color: #22c55e;
+            background-color: #dcfce7;
+        }
+        .form-check-input:checked {
+            background-color: #22c55e;
+            border-color: #22c55e;
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <div class="card mx-auto" style="max-width: 450px;">
-            <div class="card-body">
-                <h3 class="text-center mb-3">Select a Farm</h3>
+<body class="d-flex align-items-center">
+    <div class="container">
+        <div class="card farm-card mx-auto" style="max-width: 450px;">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <img src="{% static 'img/head.png' %}" height="55" alt="Sheeper Logo">
+                    <div class="sheeper-brand mt-2">Sheeper</div>
+                    <p class="text-muted mt-2 mb-0" style="font-size: 0.9rem;">
+                        <i class="bi bi-building me-1"></i>Select a farm to continue
+                    </p>
+                </div>
 
                 {% if messages %}
                   {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
+                    <div class="alert alert-danger py-2 border-0" style="border-radius: 8px;">{{ message }}</div>
                   {% endfor %}
                 {% endif %}
 
@@ -24,16 +82,24 @@
                     {% csrf_token %}
                     <div class="list-group mb-3">
                         {% for farm in farms %}
-                        <label class="list-group-item">
-                            <input type="radio" name="farm_id" value="{{ farm.pk }}" class="form-check-input me-2" required>
-                            {{ farm.name }}
+                        <label class="list-group-item d-flex align-items-center px-3 py-3">
+                            <input type="radio" name="farm_id" value="{{ farm.pk }}" class="form-check-input me-3" required>
+                            <div>
+                                <span style="font-weight: 500;">{{ farm.name }}</span>
+                            </div>
                         </label>
                         {% endfor %}
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Continue</button>
+                    <button type="submit" class="btn btn-continue text-white w-100">
+                        Continue <i class="bi bi-arrow-right ms-1"></i>
+                    </button>
                 </form>
                 {% else %}
-                <p class="text-center text-muted">No farms available. Ask an admin to add you to a farm.</p>
+                <div class="text-center py-3">
+                    <i class="bi bi-exclamation-circle text-muted" style="font-size: 2rem;"></i>
+                    <p class="text-muted mt-2 mb-1">No farms available.</p>
+                    <small class="text-muted">Ask an admin to add you to a farm.</small>
+                </div>
                 {% endif %}
             </div>
         </div>

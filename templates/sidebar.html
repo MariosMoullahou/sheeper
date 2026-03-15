@@ -1,28 +1,77 @@
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&display=swap');
+.sheeper-sidebar {
+    background: linear-gradient(180deg, #14532d 0%, #166534 50%, #15803d 100%);
+    font-family: 'Poppins', sans-serif;
+}
 
 .sheeper-brand {
     font-family: 'Poppins', sans-serif;
-    font-weight: 400;
-    font-size: 1.8rem;
+    font-weight: 700;
+    font-size: 1.6rem;
     letter-spacing: 1px;
-    color: #001f47;
+    color: #fff;
 }
 
-.nav-link.active {
-    background-color: #d0fbc8;
-    color: #001f47;
-    border-radius: .5rem;
+.sidebar-nav .nav-link {
+    color: rgba(255, 255, 255, 0.75);
+    padding: 0.65rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 400;
 }
 
+.sidebar-nav .nav-link i {
+    width: 20px;
+    text-align: center;
+}
+
+.sidebar-nav .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #fff;
+}
+
+.sidebar-nav .nav-link.active {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    font-weight: 500;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-farm-card {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px;
+    backdrop-filter: blur(4px);
+}
+
+.sidebar-user-badge {
+    background: rgba(74, 222, 128, 0.2);
+    color: #86efac;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.sidebar-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    margin: 0.75rem 0;
+}
 </style>
-<nav class="bg-light vh-100 p-3 shadow-sm d-flex flex-column">
-    <h4 class="mb-4 text-center text-primary d-flex align-items-center justify-content-center">
-        <img src="/static/img/head.png" height="50" class="me-2" alt="Sheeper Logo">
-        <span class="sheeper-brand">Sheeper</span>
-    </h4>
 
-    <ul class="nav flex-column gap-2">
+<nav class="sheeper-sidebar vh-100 p-3 d-flex flex-column" style="overflow-y: auto;">
+    <!-- Brand -->
+    <div class="text-center mb-4 pt-1">
+        <img src="/static/img/head.png" height="45" class="mb-2" alt="Sheeper Logo"
+             style="filter: brightness(0) invert(1) brightness(1.1);">
+        <div class="sheeper-brand">Sheeper</div>
+        <small style="color: rgba(255,255,255,0.4); font-size: 0.7rem; letter-spacing: 2px;">FARM MANAGER</small>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <!-- Navigation -->
+    <ul class="nav flex-column gap-1 sidebar-nav mt-1">
         {% if user_role == 'farmer' or user_role == 'manager' or request.user.is_superuser %}
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'homepage' %}active{% endif %}"
@@ -45,13 +94,13 @@
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'sheep_create' %}active{% endif %}"
                href="{% url 'sheep_create' %}">
-                <i class="bi bi-plus-circle-fill me-2"></i> Sheeps
+                <i class="bi bi-grid-3x3-gap-fill me-2"></i> Sheeps
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'calendar' %}active{% endif %}"
                 href="{% url 'calendar' %}">
-                <i class="bi bi-calendar me-2"></i> Calendar
+                <i class="bi bi-calendar-event me-2"></i> Calendar
             </a>
         </li>
         <li class="nav-item">
@@ -63,39 +112,45 @@
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'milking' %}active{% endif %}"
                href="{% url 'milking' %}">
-                <i class="bi bi-bucket me-2"></i> Milking
+                <i class="bi bi-droplet-fill me-2"></i> Milking
             </a>
         </li>
         {% endif %}
     </ul>
 
+    <!-- Bottom section -->
     {% if request.user.is_authenticated %}
-    <div class="mt-auto mb-2">
+    <div class="mt-auto">
+        <div class="sidebar-divider"></div>
+
         {% if farm %}
-        <div class="text-center mb-2">
-            <small class="text-muted">
-                <i class="bi bi-building me-1"></i> {{ farm.name }}
-            </small>
-            <br>
-            <a href="{% url 'switch_farm' %}" class="small text-decoration-none">Switch farm</a>
+        <div class="sidebar-farm-card text-center mb-2">
+            <small style="color: rgba(255,255,255,0.5); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Active Farm</small>
+            <div style="color: #fff; font-weight: 500; font-size: 0.9rem;">{{ farm.name }}</div>
+            <a href="{% url 'switch_farm' %}" style="color: #86efac; font-size: 0.75rem; text-decoration: none;">
+                <i class="bi bi-arrow-repeat me-1"></i>Switch
+            </a>
         </div>
         {% endif %}
+
         <div class="text-center mb-2">
-            <small class="text-muted">
-                <i class="bi bi-person me-1"></i> {{ request.user.username }}
-                <span class="badge bg-secondary">{{ user_role|title }}</span>
-            </small>
+            <div style="color: rgba(255,255,255,0.8); font-size: 0.85rem;">
+                <i class="bi bi-person-circle me-1"></i> {{ request.user.username }}
+            </div>
+            <span class="badge sidebar-user-badge mt-1">{{ user_role|upper }}</span>
         </div>
+
         <form method="POST" action="{% url 'logout' %}">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-danger w-100">
-                <i class="bi bi-box-arrow-right me-2"></i> Logout
+            <button type="submit" class="btn btn-sm w-100 mt-1"
+                    style="background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); border: 1px solid rgba(255,255,255,0.12);">
+                <i class="bi bi-box-arrow-right me-1"></i> Logout
             </button>
         </form>
     </div>
     {% endif %}
 
     <div class="mt-2 text-center">
-        <small class="text-muted">© 2025 Sheep Farm</small>
+        <small style="color: rgba(255,255,255,0.25); font-size: 0.7rem;">&copy; 2025 Sheeper</small>
     </div>
 </nav>

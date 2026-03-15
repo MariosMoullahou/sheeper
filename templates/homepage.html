@@ -1,70 +1,98 @@
 {% extends "base.html" %}
 {% load static %}
 
-
 {% block page %}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;700;800&display=swap');
-
-.welcome {
-    font-family: 'Poppins', sans-serif;
-    font-weight: 300;
-    font-size: 1.8rem;
-    letter-spacing: 1px;
-    color: #000000;
-}
+    .welcome {
+        font-weight: 300;
+        font-size: 1.5rem;
+        color: #166534;
+    }
+    @media (min-width: 768px) {
+        .welcome { font-size: 1.8rem; }
+    }
+    .stat-icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
+    .home-card {
+        border-left: 4px solid var(--green-400);
+        transition: transform 0.15s ease;
+    }
+    .home-card:hover {
+        transform: translateY(-2px);
+    }
 </style>
 
-<div class="row mb-4">
-    <div class="col">
-        <h5>
-            <span class="welcome">Welcome, {{ user.username }}</span>
-        </h5>
-    </div>
+<div class="mb-4">
+    <span class="welcome">Welcome, <strong style="font-weight: 600;">{{ user.username }}</strong></span>
 </div>
 
 <div class="row g-3 mb-4">
     <!-- Profile card -->
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="card-title text-muted">
-                    <i class="bi bi-person-circle me-2"></i>Profile
-                </h6>
-                <p class="mb-1"><strong>{{ user.username }}</strong></p>
-                <span class="badge bg-secondary">{{ user_role|title }}</span>
+    <div class="col-6 col-md-4">
+        <div class="card shadow-sm h-100 home-card">
+            <div class="card-body d-flex align-items-start gap-3">
+                <div class="stat-icon" style="background: var(--green-100); color: var(--green-700);">
+                    <i class="bi bi-person-circle"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block mb-1">Profile</small>
+                    <strong>{{ user.username }}</strong>
+                    <div class="mt-1">
+                        <span class="badge" style="background: var(--green-100); color: var(--green-700); font-weight: 500;">
+                            {{ user_role|title }}
+                        </span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Active farm card -->
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="card-title text-muted">
-                    <i class="bi bi-building me-2"></i>Active Farm
-                </h6>
-                {% if farm %}
-                <p class="mb-1"><strong>{{ farm.name }}</strong></p>
-                <a href="{% url 'switch_farm' %}" class="btn btn-sm btn-outline-primary mt-1">
-                    <i class="bi bi-arrow-repeat me-1"></i>Switch Farm
-                </a>
-                {% else %}
-                <p class="text-muted mb-1">No farm selected</p>
-                <a href="{% url 'select_farm' %}" class="btn btn-sm btn-outline-primary mt-1">Select Farm</a>
-                {% endif %}
+    <div class="col-6 col-md-4">
+        <div class="card shadow-sm h-100 home-card">
+            <div class="card-body d-flex align-items-start gap-3">
+                <div class="stat-icon" style="background: var(--green-100); color: var(--green-700);">
+                    <i class="bi bi-building"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block mb-1">Active Farm</small>
+                    {% if farm %}
+                    <strong>{{ farm.name }}</strong>
+                    <div class="mt-1">
+                        <a href="{% url 'switch_farm' %}" class="btn btn-sm btn-outline-primary" style="font-size: 0.75rem;">
+                            <i class="bi bi-arrow-repeat me-1"></i>Switch
+                        </a>
+                    </div>
+                    {% else %}
+                    <span class="text-muted">No farm selected</span>
+                    <div class="mt-1">
+                        <a href="{% url 'select_farm' %}" class="btn btn-sm btn-outline-primary" style="font-size: 0.75rem;">Select</a>
+                    </div>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Stats card -->
-    <div class="col-md-4">
-        <div class="card shadow-sm h-100">
-            <div class="card-body">
-                <h6 class="card-title text-muted">
-                    <i class="bi bi-bar-chart me-2"></i>Farm Overview
-                </h6>
-                <p class="mb-1"><strong>{{ sheep|length }}</strong> sheep registered</p>
+    <div class="col-12 col-md-4">
+        <div class="card shadow-sm h-100 home-card">
+            <div class="card-body d-flex align-items-start gap-3">
+                <div class="stat-icon" style="background: var(--green-100); color: var(--green-700);">
+                    <i class="bi bi-bar-chart-fill"></i>
+                </div>
+                <div>
+                    <small class="text-muted d-block mb-1">Farm Overview</small>
+                    <strong style="font-size: 1.5rem; color: var(--green-700);">{{ sheep|length }}</strong>
+                    <span class="text-muted" style="font-size: 0.85rem;"> sheep registered</span>
+                </div>
             </div>
         </div>
     </div>

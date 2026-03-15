@@ -2,34 +2,88 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% load static %}
     <link rel="icon" type="image/png" href="{% static 'img/head.png' %}">
-    <title>Sheeper - Login</title>
+    <title>Sheeper</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #14532d 0%, #166534 40%, #22c55e 100%);
+            min-height: 100vh;
+        }
+        .login-card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        .sheeper-brand {
+            font-weight: 700;
+            font-size: 2.2rem;
+            color: #166534;
+        }
+        .sheeper-subtitle {
+            color: #86efac;
+            font-size: 0.75rem;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border: none;
+            padding: 0.65rem;
+            font-weight: 500;
+            font-size: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #15803d, #14532d);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(22, 163, 74, 0.4);
+        }
+        .form-control {
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            border: 1.5px solid #e2e8f0;
+        }
+        .form-control:focus {
+            border-color: #4ade80;
+            box-shadow: 0 0 0 0.2rem rgba(34, 197, 94, 0.2);
+        }
+    </style>
 </head>
-<body class="bg-light">
-    <div class="container mt-5">
-        <div class="card mx-auto" style="max-width: 400px;">
-            <div class="card-body">
-                <h3 class="text-center mb-3">Login</h3>
+<body class="d-flex align-items-center">
+    <div class="container">
+        <div class="card login-card mx-auto" style="max-width: 400px;">
+            <div class="card-body p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <img src="{% static 'img/head.png' %}" height="65" alt="Sheeper Logo">
+                    <div class="sheeper-brand mt-2">Sheeper</div>
+                    <div class="sheeper-subtitle mt-1" style="color: #15803d;">Farm Manager</div>
+                </div>
 
                 {% if messages %}
                   {% for message in messages %}
-                    <div class="alert alert-danger">{{ message }}</div>
+                    <div class="alert alert-danger py-2 border-0" style="border-radius: 8px;">{{ message }}</div>
                   {% endfor %}
                 {% endif %}
 
                 <form method="POST">
                     {% csrf_token %}
                     <div class="mb-3">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" required>
+                        <label class="form-label text-muted small">Username</label>
+                        <input type="text" class="form-control" name="username" required autofocus>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Password</label>
+                    <div class="mb-4">
+                        <label class="form-label text-muted small">Password</label>
                         <input type="password" class="form-control" name="password" required>
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Login</button>
+                    <button type="submit" class="btn btn-login text-white w-100">
+                        Sign In
+                    </button>
                 </form>
             </div>
         </div>

@@ -1,178 +1,133 @@
 {% extends "base.html" %}
 {% load static %}
 
-
-
 {% block page %}
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-<div class="container text-center">
-    <div class="row">
+<div class="row g-3">
 
-        <!-- TABLE -->
-        <div class="col-8">
-        <div class="card shadow-sm">
-            <div class="card-body">
-            <div id="example-table"></div>
-            </div>
+    <!-- TABLE -->
+    <div class="col-12 col-lg-8 order-2 order-lg-1">
+      <div class="card shadow-sm">
+        <div class="card-header" style="background: var(--green-50);">
+          <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-lightning-fill me-2"></i>Birth Events</h5>
         </div>
+        <div class="card-body p-0 p-md-3">
+          <div id="birth-table"></div>
         </div>
-
-        <!-- FORM
-        <div class="card-body">
-        -->
-        <div class="col-4">
-            <div class="card shadow-sm mt-3 mt-md-0">
-                <div class="card-header bg-success text-white">
-                    <h4 class="mb-0">Birth Event</h4>
-                </div>
-                <div class="card-body">
-                    <div id="app">
-                        <birth-event-form></birth-event-form>
-                    </div>
-
-                    <script>
-                        const BirthEventForm = {
-                        template: `
-                            <form @submit.prevent="handleSubmit" id="birthevent-form">
-
-                            <!-- Mother -->
-                            <div class="mb-3">
-                                <label class="form-label">Sheep ID</label>
-                                <input
-                                v-model="form.mother"
-                                type="text"
-                                class="form-control"
-                                name="mother"
-                                placeholder="Sheep ID"
-                                />
-                            </div>
-
-                            <!-- Lambs -->
-                            <div>
-                                <div class="mb-2" v-for="(lamb, index) in form.lambs" :key="index">
-                                <input
-                                    v-model="form.lambs[index]"
-                                    type="text"
-                                    class="form-control"
-                                    name="lambs"
-                                    placeholder="Lamb ID"
-                                />
-                                </div>
-                            </div>
-
-                            <button type="button" class="btn btn-secondary mb-3" @click="addLambField">
-                                + Add Another
-                            </button>
-
-                            <!-- Date -->
-                            <div class="mb-3">
-                                <label class="form-label">Birthdate</label>
-                                <input
-                                v-model="form.date"
-                                type="date"
-                                class="form-control"
-                                name="date"
-                                />
-                            </div>
-
-                            <div class="d-flex justify-content-end">
-                                <button type="submit" class="btn btn-success px-4">Save Event</button>
-                            </div>
-
-                            </form>
-                        `,
-
-                        data() {
-                            return {
-                            form: {
-                                mother: "",
-                                lambs: [""],
-                                date: "",
-                            },
-                            };
-                        },
-
-                        methods: {
-                            addLambField() {
-                            this.form.lambs.push("");
-                            },
-
-                            async handleSubmit() {
-                            // Get CSRF from Django template
-                            const csrfToken = document.querySelector("[name=csrfmiddlewaretoken]").value;
-
-                            // POST directly with Vue data
-                            const response = await fetch("{% url 'birthevent-data-api' %}", {
-                                method: "POST",
-                                headers: {
-                                "Content-Type": "application/json",
-                                "X-CSRFToken": csrfToken
-                                },
-                                body: JSON.stringify(this.form)
-                            });
-
-                            if (response.ok) {
-                                const data = await response.json();
-
-                                // Add row to Tabulator
-                                table.updateOrAddData([data]);
-
-                                // Reset form
-                                this.form = {
-                                mother: "",
-                                lambs: [""],
-                                date: "",
-                                };
-
-                                console.log("New row added:", data);
-
-                            } else {
-                                const errors = await response.json();
-                                alert("Error: " + JSON.stringify(errors));
-                            }
-                            }
-                        }
-                        };
-
-                        document.addEventListener("DOMContentLoaded", function () {
-                        const app = Vue.createApp({});
-                        app.component("birth-event-form", BirthEventForm);
-                        app.mount("#app");
-                        });
-                    </script>
-                </div>
-            </div>
-        </div>
+      </div>
     </div>
+
+    <!-- FORM -->
+    <div class="col-12 col-lg-4 order-1 order-lg-2">
+      <div class="card shadow-sm">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Birth Event</h5>
+        </div>
+        <div class="card-body">
+          <form id="birthevent-form">
+            {% csrf_token %}
+
+            <div class="mb-3">
+              <label class="form-label">Mother (Earing Tag)</label>
+              <input type="text" class="form-control" name="mother" placeholder="Mother earing tag" required>
+            </div>
+
+            <div id="lambs-container">
+              <label class="form-label">Lambs</label>
+              <div class="mb-2">
+                <input type="text" class="form-control lamb-input" placeholder="Lamb earing tag">
+              </div>
+            </div>
+
+            <button type="button" class="btn btn-outline-secondary btn-sm mb-3" id="add-lamb-btn">
+              <i class="bi bi-plus me-1"></i>Add Another Lamb
+            </button>
+
+            <div class="mb-3">
+              <label class="form-label">Birthdate</label>
+              <input type="date" class="form-control" name="date" required>
+            </div>
+
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-lg me-1"></i>Save Event
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
 </div>
+
 <script>
+// Add lamb field
+document.getElementById('add-lamb-btn').addEventListener('click', function() {
+    const container = document.getElementById('lambs-container');
+    const div = document.createElement('div');
+    div.className = 'mb-2';
+    div.innerHTML = '<input type="text" class="form-control lamb-input" placeholder="Lamb earing tag">';
+    container.appendChild(div);
+});
 
-    var table = new Tabulator("#example-table", {
-    ajaxURL: "/api/birthevent/",
-    layout:"fitColumns",      //fit columns to width of table
-    responsiveLayout:"hide",  //hide columns that don't fit on the table
-    addRowPos:"top",          //when adding a new row, add it to the top of the table
-    history:true,             //allow undo and redo actions on the table
-    pagination:"local",       //paginate the data
-    paginationSize:10,         //allow 100 rows per page of data
-    paginationCounter:"rows", //display count of paginated rows in footer
-    movableColumns:true,      //allow column order to be changed
-    initialSort:[             //set the initial sort order of the data
-        {column:"name", dir:"asc"},
-    ],
-    columnDefaults:{
-        tooltip:true,         //show tool tips on cells
-    },
-    columns:[                 //define the table columns
-        {title:"Mother Earing", field:"mother"},
-        {title: "Birthdate",field: "date", sorter:"date"},
-        {title: "Lambs", field: "lambs"},
-    ],
+// Submit form
+document.getElementById('birthevent-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    const lambs = [];
+    form.querySelectorAll('.lamb-input').forEach(input => {
+        if (input.value.trim()) lambs.push(input.value.trim());
     });
+
+    const payload = {
+        mother: form.querySelector('[name=mother]').value,
+        lambs: lambs,
+        date: form.querySelector('[name=date]').value
+    };
+
+    const response = await fetch("{% url 'birthevent-data-api' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+        const data = await response.json();
+        table.updateOrAddData([data]);
+
+        // Reset form and lambs
+        form.reset();
+        const container = document.getElementById('lambs-container');
+        const lambDivs = container.querySelectorAll('.mb-2');
+        lambDivs.forEach((div, i) => { if (i > 0) div.remove(); });
+        container.querySelector('.lamb-input').value = '';
+    } else {
+        const errors = await response.json();
+        alert("Error: " + JSON.stringify(errors));
+    }
+});
+
+var table = new Tabulator("#birth-table", {
+    ajaxURL: "/api/birthevent/",
+    layout: "fitColumns",
+    responsiveLayout: "collapse",
+    addRowPos: "top",
+    pagination: "local",
+    paginationSize: 10,
+    paginationCounter: "rows",
+    movableColumns: true,
+    initialSort: [
+        {column: "date", dir: "desc"},
+    ],
+    columns: [
+        {title: "Mother Earing", field: "mother", minWidth: 100},
+        {title: "Birthdate", field: "date", sorter: "date", minWidth: 100},
+        {title: "Lambs", field: "lambs", minWidth: 120},
+    ],
+});
 </script>
-
-
-
-
 
 {% endblock %}

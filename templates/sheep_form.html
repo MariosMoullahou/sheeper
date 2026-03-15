@@ -1,99 +1,77 @@
 {% extends "base.html" %}
 {% load static %}
 
-
-
 {% block page %}
-<div class="container text-center">
-  <div class="row">
+<div class="row g-3">
 
     <!-- TABLE -->
-    <div class="col-8">
+    <div class="col-12 col-lg-8 order-2 order-lg-1">
       <div class="card shadow-sm">
-        <div class="card-body">
-          <div id="example-table"></div>
+        <div class="card-header" style="background: var(--green-50);">
+          <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-list-ul me-2"></i>Sheep List</h5>
+        </div>
+        <div class="card-body p-0 p-md-3">
+          <div id="sheep-table"></div>
         </div>
       </div>
     </div>
 
     <!-- FORM -->
-    <div class="col-4">
-      <div class="card shadow-sm mt-3 mt-md-0">
-        <div class="card-header bg-success text-white">
-          <h4 class="mb-0">Create Sheep</h4>
+    <div class="col-12 col-lg-4 order-1 order-lg-2">
+      <div class="card shadow-sm">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Create Sheep</h5>
         </div>
         <div class="card-body">
           <form id="sheep-form">
             {% csrf_token %}
 
             <div class="mb-3">
-              <label for="sheep_name" class="form-label">Sheep Earing</label>
-              <input id="sheep_name" name="earing" type="text" class="form-control" placeholder="Earing Id">
+              <label for="sheep_earing" class="form-label">Earing Tag</label>
+              <input id="sheep_earing" name="earing" type="text" class="form-control" placeholder="e.g. 1234" required>
             </div>
 
             <div class="mb-3">
-              <label for="sheep_gender" class="form-label">Sheep Gender</label>
-              <input id="sheep_gender" name="gender" type="text" class="form-control" placeholder="Gender">
+              <label for="sheep_gender" class="form-label">Gender</label>
+              <select id="sheep_gender" name="gender" class="form-select" required>
+                <option value="" disabled selected>Select gender</option>
+                <option value="F">Female</option>
+                <option value="M">Male</option>
+              </select>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Birthdate</label>
-              <input v-model="form.date" type="date" class="form-control" name="birthdate" />
+              <label for="sheep_birthdate" class="form-label">Birthdate</label>
+              <input id="sheep_birthdate" name="birthdate" type="date" class="form-control">
             </div>
 
             <div class="mb-3">
-              <label for="sheep_mother" class="form-label">Sheep Mother</label>
-              <input id="sheep_gender" name="mother" type="text" class="form-control" placeholder="Mother id">
+              <label for="sheep_mother" class="form-label">Mother (Earing Tag)</label>
+              <input id="sheep_mother" name="mother" type="text" class="form-control" placeholder="Mother earing tag">
             </div>
 
-            <button type="submit" class="btn btn-success me-md-2 ">Save</button>
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-lg me-1"></i>Save
+            </button>
           </form>
         </div>
       </div>
     </div>
 
-  </div>
 </div>
-<!-- Modal -->
-<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h1 class="modal-title fs-5" id="staticBackdropLabel">Modal title</h1>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <ul class="list-group">
-          <li class="list-group-item">{{sheep.name}}</li>
-          <li class="list-group-item">A second item</li>
-          <li class="list-group-item">A third item</li>
-          <li class="list-group-item">A fourth item</li>
-          <li class="list-group-item">And a fifth one</li>
-        </ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary">Understood</button>
-      </div>
-    </div>
-  </div>
-</div>
+
 <script>
     document.getElementById('sheep-form').addEventListener('submit', async function(e) {
       e.preventDefault();
 
       const form = e.target;
-
-      // Collect form data
       const formData = {};
       form.querySelectorAll('input, select, textarea').forEach(input => {
-          if (input.name) formData[input.name] = input.value;
+          if (input.name && input.name !== 'csrfmiddlewaretoken') formData[input.name] = input.value;
       });
 
-      // Get CSRF token
       const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
-      // Post the data
       const response = await fetch("{% url 'sheep-data-api' %}", {
           method: "POST",
           headers: {
@@ -103,69 +81,58 @@
           body: JSON.stringify(formData)
       });
 
-      // Handle response
       if (response.ok) {
           const data = await response.json();
-
-          // Add the new row to Tabulator
-          table.updateOrAddData([data]); // works for adding single or multiple rows
-
-          // Reset form
+          table.updateOrAddData([data]);
           form.reset();
-
-          console.log("New row added:", data);
       } else {
           const errors = await response.json();
           alert("Error: " + JSON.stringify(errors));
       }
     });
 
-    var table = new Tabulator("#example-table", {
-    ajaxURL: "/api/sheep/",
-    layout:"fitColumns",      //fit columns to width of table
-    responsiveLayout:"hide",  //hide columns that don't fit on the table
-    addRowPos:"top",          //when adding a new row, add it to the top of the table
-    history:true,             //allow undo and redo actions on the table
-    pagination:"local",       //paginate the data
-    paginationSize:10,         //allow 100 rows per page of data
-    paginationCounter:"rows", //display count of paginated rows in footer
-    movableColumns:true,      //allow column order to be changed
-    initialSort:[             //set the initial sort order of the data
-        {column:"name", dir:"asc"},
-    ],
-    columnDefaults:{
-        tooltip:true,         //show tool tips on cells
-    },
-    columns:[                 //define the table columns
-        {title: "Earing", field: "earing"},
-        {title: "Birthdate", field: "birthdate", sorter:"date"},
-        {title: "Gender", field: "gender"},
-        {title: "Mother", field: "mother"},
-        {title: "Active", field: "is_active", formatter:"tickCross", width: 80, hozAlign: "center"},
-        {
-          title: "",
-          formatter: () => '<button class="btn btn-sm btn-outline-danger">Delete</button>',
-          width: 90,
-          hozAlign: "center",
-          headerSort: false,
-          cellClick: async (e, cell) => {
-              const rowData = cell.getRow().getData();
-              if (!confirm(`Are you sure you want to delete sheep "${rowData.earing}"?`)) return;
+    var table = new Tabulator("#sheep-table", {
+        ajaxURL: "/api/sheep/",
+        layout: "fitColumns",
+        responsiveLayout: "collapse",
+        addRowPos: "top",
+        pagination: "local",
+        paginationSize: 10,
+        paginationCounter: "rows",
+        movableColumns: true,
+        initialSort: [
+            {column: "earing", dir: "asc"},
+        ],
+        columns: [
+            {title: "Earing", field: "earing", minWidth: 80},
+            {title: "Birthdate", field: "birthdate", sorter: "date", minWidth: 100},
+            {title: "Gender", field: "gender", minWidth: 70},
+            {title: "Mother", field: "mother", minWidth: 80},
+            {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center"},
+            {
+              title: "",
+              formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',
+              width: 60,
+              hozAlign: "center",
+              headerSort: false,
+              cellClick: async (e, cell) => {
+                  const rowData = cell.getRow().getData();
+                  if (!confirm(`Are you sure you want to delete sheep "${rowData.earing}"?`)) return;
 
-              const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
-              const response = await fetch(`/api/sheep/${rowData.id}/`, {
-                  method: "DELETE",
-                  headers: { "X-CSRFToken": csrfToken }
-              });
+                  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                  const response = await fetch(`/api/sheep/${rowData.id}/`, {
+                      method: "DELETE",
+                      headers: { "X-CSRFToken": csrfToken }
+                  });
 
-              if (response.ok) {
-                  cell.getRow().delete();
-              } else {
-                  alert("Failed to delete sheep.");
+                  if (response.ok) {
+                      cell.getRow().delete();
+                  } else {
+                      alert("Failed to delete sheep.");
+                  }
               }
-          }
-        }
-    ],
+            }
+        ],
     });
-</script>    
+</script>
 {% endblock %}
