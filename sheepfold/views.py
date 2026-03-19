@@ -228,16 +228,40 @@ def birthevent_api(request):
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
-        events = BirthEvent.objects.filter(mother__farm=farm)
+        events = (
+            BirthEvent.objects.filter(mother__farm=farm)
+            .select_related('mother')
+            .prefetch_related('lambs')
+            .order_by('-date')
+        )
         serializer = BirthEventSerializer(events, many=True)
         return Response(serializer.data)
 
     elif request.method == 'POST':
         serializer = BirthEventSerializer(data=request.data)
         if serializer.is_valid():
+            mother = serializer.validated_data['mother']
+            if mother.farm_id != farm.pk:
+                return Response(
+                    {"mother": "This sheep does not belong to your farm."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required(login_url='login')
+@api_view(['DELETE'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def birthevent_delete_api(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    event = get_object_or_404(BirthEvent, pk=pk, mother__farm=farm)
+    event.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @login_required(login_url='login')

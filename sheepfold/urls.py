@@ -11,6 +11,7 @@ urlpatterns = [
     path('api/sheep/', views.sheep_data_api, name='sheep-data-api'),
     path('api/sheep/<int:pk>/', views.sheep_delete_api, name='sheep-delete-api'),
     path('api/birthevent/', views.birthevent_api, name='birthevent-data-api'),
+    path('api/birthevent/<int:pk>/', views.birthevent_delete_api, name='birthevent-delete-api'),
     path("calendar/", views.calendar_view, name="calendar"),
     path('api/calendar/', views.calendar_data_api, name='calendar-api'),
     path("<str:pk>/", views.sheep_detail, name="sheep_detail"),

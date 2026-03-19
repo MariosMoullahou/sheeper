@@ -1,0 +1,159 @@
+SHEEPER — Feature Roadmap
+=========================
+
+Status legend:
+  [x] Done
+  [~] In progress
+  [-] Planned
+  [ ] Idea / Backlog
+
+
+=== CORE (Already Built) ===
+
+  [x] Sheep CRUD (earing, gender, birthdate, mother)
+  [x] Milking records
+  [x] Lamping (birth events)
+  [x] Calendar events
+  [x] Multi-farm architecture (Farm model, farm FK on all models)
+  [x] User authentication (login/logout)
+  [x] Farm selection & switching
+  [x] Active/Inactive flag on sheep and milk
+  [x] Delete sheep & milk from UI (with confirmation)
+  [x] Role-based access (farmer, analyst, manager, superuser)
+  [x] Green theme, mobile-friendly layout
+  [x] Homepage dashboard (quick actions, recent activity, upcoming events)
+
+
+=== HIGH PRIORITY (Daily Use) ===
+
+  [-] Health Records
+      - Track vaccinations, treatments, vet visits per sheep
+      - Fields: type (vaccine/treatment/checkup), date, product, dose, vet name, notes
+      - Alert when next dose/booster is due
+      - History view per sheep
+
+  [-] Weight Tracking
+      - Record sheep weight over time
+      - Growth charts (Chart.js line chart per sheep)
+      - Flag underweight animals
+
+  [-] Feeding Management
+      - Track feed types and inventory
+      - Daily consumption per group/pen
+      - Alert when stock is running low
+
+  [-] Mortality/Culling Log
+      - Record why a sheep was removed: died, sold, culled, lost
+      - Date and notes
+      - Replace simple is_active toggle with a proper status field:
+        active, sold, died, culled
+
+  [-] Notifications/Alerts
+      - In-app notification center (bell icon in sidebar)
+      - Triggers: vaccination due, milk drop detected, low feed stock,
+        upcoming calendar event
+      - Optional: email notifications
+
+
+=== MEDIUM PRIORITY (Weekly Use) ===
+
+  [-] Groups/Pens
+      - Organize sheep into groups: pregnant, lactating, dry, lambs, rams
+      - Batch operations: move group, record milk for group
+      - Visual group overview on homepage
+
+  [-] Breeding Management
+      - Track rams and their assignments
+      - Record breeding dates
+      - Auto-calculate expected lambing date (gestation ~150 days)
+      - Gestation countdown on calendar
+      - Link to lamping when birth happens
+
+  [-] Reports & Export
+      - Export sheep list, milk records, health history to CSV/Excel
+      - Summary reports: monthly milk totals, birth rates, mortality rates
+      - Government compliance reports (depends on country)
+
+  [-] Search & Filters
+      - Global search bar (search sheep by earing across all pages)
+      - Filter tables by: gender, age range, status, group
+      - Saved filters / quick filter presets
+
+  [-] Notes/Comments
+      - Attach notes to any sheep record
+      - Timestamped, shows who wrote it
+      - Examples: "limping since March", "good mother", "aggressive ram"
+
+
+=== NICE TO HAVE (Long-term) ===
+
+  [ ] Genealogy Tree
+      - Visual family tree per sheep
+      - Show mother, grandmother, siblings, offspring
+      - Inbreeding detection (flag if related sheep are bred)
+
+  [ ] Barcode/QR Scanner
+      - Scan ear tags with phone camera from the browser
+      - Use html5-qrcode library (no native app needed)
+      - Auto-fill earing field in forms
+
+  [ ] Multi-language Support
+      - Greek / English toggle
+      - Django i18n framework
+      - Language preference saved per user
+
+  [ ] Photo Uploads
+      - Attach photos to sheep records
+      - Django storage backend (local or S3)
+      - Thumbnail gallery on sheep detail page
+
+  [ ] Weather Integration
+      - Show local weather on dashboard
+      - Useful for lambing season and outdoor grazing decisions
+      - Free API: OpenWeatherMap or Open-Meteo
+
+  [ ] Financial Tracking
+      - Cost per sheep: feed, vet, purchase price
+      - Income: milk sales, lamb sales
+      - Profit/loss per sheep and per farm
+      - Monthly/yearly financial summary
+
+  [ ] Offline Mode (PWA)
+      - Progressive Web App with service worker
+      - Cache pages and data locally
+      - Queue actions offline, sync when back online
+      - "Install" from browser — works like a native app
+      - No App Store needed
+
+  [ ] Audit Log
+      - Track who changed what and when
+      - Important for multi-user farms
+      - Django signals or middleware to auto-log changes
+      - Admin-viewable history
+
+  [ ] Dashboard Charts (separate app)
+      - Milk production trends (line chart)
+      - Sheep count by gender (doughnut)
+      - Birth events per month (bar chart)
+      - Active vs inactive sheep
+      - Chart.js library
+
+
+=== SEPARATE APP: Milk Analysis (Lab) ===
+
+  [-] Milk Analysis App
+      - Lab results: fat %, protein %, somatic cell count, bacteria count
+      - Per-sheep and per-farm averages
+      - Trend charts over time
+      - Analyst role: read-only access to this app only
+      - Import from lab CSV/Excel files
+
+
+=== BUGS & TECH DEBT ===
+
+  [-] Fix CSRF token in lamping AJAX calls
+  [-] Lamping API: validate mother/lamb IDs exist
+  [-] Rewrite lamping from Vue to vanilla JS (consistency)
+  [-] Add tests (models, views, API)
+  [-] Missing /static/img/head.png — need actual logo file
+  [-] Sidebar "Milk Analysis" link points to homepage (no page yet)

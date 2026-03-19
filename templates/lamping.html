@@ -20,7 +20,7 @@
     <div class="col-12 col-lg-4 order-1 order-lg-2">
       <div class="card shadow-sm">
         <div class="card-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
-          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Birth Event</h5>
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>New Birth Event</h5>
         </div>
         <div class="card-body">
           <form id="birthevent-form">
@@ -31,10 +31,25 @@
               <input type="text" class="form-control" name="mother" placeholder="Mother earing tag" required>
             </div>
 
-            <div id="lambs-container">
-              <label class="form-label">Lambs</label>
-              <div class="mb-2">
+            <div class="mb-3">
+              <label class="form-label">Birthdate</label>
+              <input type="date" class="form-control" name="date" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" rows="2" placeholder="Optional notes"></textarea>
+            </div>
+
+            <div id="lambs-container" class="mb-2">
+              <label class="form-label">New Lambs</label>
+              <div class="lamb-row d-flex gap-2 mb-2">
                 <input type="text" class="form-control lamb-input" placeholder="Lamb earing tag">
+                <select class="form-select lamb-gender" style="max-width: 110px;">
+                  <option value="" selected>Gender</option>
+                  <option value="F">Female</option>
+                  <option value="M">Male</option>
+                </select>
               </div>
             </div>
 
@@ -42,10 +57,7 @@
               <i class="bi bi-plus me-1"></i>Add Another Lamb
             </button>
 
-            <div class="mb-3">
-              <label class="form-label">Birthdate</label>
-              <input type="date" class="form-control" name="date" required>
-            </div>
+            <div id="form-error" class="alert alert-danger d-none mb-3" role="alert"></div>
 
             <button type="submit" class="btn btn-success w-100">
               <i class="bi bi-check-lg me-1"></i>Save Event
@@ -58,32 +70,58 @@
 </div>
 
 <script>
-// Add lamb field
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+const formError = document.getElementById('form-error');
+
+function showError(msg) {
+    formError.textContent = msg;
+    formError.classList.remove('d-none');
+}
+function hideError() {
+    formError.classList.add('d-none');
+}
+
+// --- Add / Remove lamb fields ---
 document.getElementById('add-lamb-btn').addEventListener('click', function() {
     const container = document.getElementById('lambs-container');
-    const div = document.createElement('div');
-    div.className = 'mb-2';
-    div.innerHTML = '<input type="text" class="form-control lamb-input" placeholder="Lamb earing tag">';
-    container.appendChild(div);
+    const row = document.createElement('div');
+    row.className = 'lamb-row d-flex gap-2 mb-2';
+    row.innerHTML =
+        '<input type="text" class="form-control lamb-input" placeholder="Lamb earing tag">' +
+        '<select class="form-select lamb-gender" style="max-width: 110px;">' +
+        '<option value="" selected>Gender</option>' +
+        '<option value="F">Female</option>' +
+        '<option value="M">Male</option></select>' +
+        '<button type="button" class="btn btn-outline-danger btn-sm remove-lamb-btn">' +
+        '<i class="bi bi-x-lg"></i></button>';
+    container.appendChild(row);
+    row.querySelector('.remove-lamb-btn').addEventListener('click', function() {
+        row.remove();
+    });
 });
 
-// Submit form
+// --- Submit form ---
 document.getElementById('birthevent-form').addEventListener('submit', async function(e) {
     e.preventDefault();
+    hideError();
 
     const form = e.target;
-    const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
-
-    const lambs = [];
-    form.querySelectorAll('.lamb-input').forEach(input => {
-        if (input.value.trim()) lambs.push(input.value.trim());
+    const newLambs = [];
+    form.querySelectorAll('.lamb-row').forEach(row => {
+        const earing = row.querySelector('.lamb-input').value.trim();
+        const gender = row.querySelector('.lamb-gender').value;
+        if (earing) newLambs.push({earing: earing, gender: gender || ''});
     });
 
     const payload = {
-        mother: form.querySelector('[name=mother]').value,
-        lambs: lambs,
-        date: form.querySelector('[name=date]').value
+        mother: form.querySelector('[name=mother]').value.trim(),
+        date: form.querySelector('[name=date]').value,
+        notes: form.querySelector('[name=notes]').value.trim(),
+        new_lambs: newLambs,
     };
+
+    if (!payload.mother) { showError('Mother earing tag is required.'); return; }
+    if (!payload.date) { showError('Birthdate is required.'); return; }
 
     const response = await fetch("{% url 'birthevent-data-api' %}", {
         method: "POST",
@@ -95,23 +133,29 @@ document.getElementById('birthevent-form').addEventListener('submit', async func
     });
 
     if (response.ok) {
-        const data = await response.json();
-        table.updateOrAddData([data]);
+        table.replaceData();
 
-        // Reset form and lambs
+        // Reset form
         form.reset();
         const container = document.getElementById('lambs-container');
-        const lambDivs = container.querySelectorAll('.mb-2');
-        lambDivs.forEach((div, i) => { if (i > 0) div.remove(); });
+        const rows = container.querySelectorAll('.lamb-row');
+        rows.forEach((row, i) => { if (i > 0) row.remove(); });
         container.querySelector('.lamb-input').value = '';
     } else {
         const errors = await response.json();
-        alert("Error: " + JSON.stringify(errors));
+        const msg = typeof errors === 'object'
+            ? Object.entries(errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+            : String(errors);
+        showError(msg);
     }
 });
 
+// --- Tabulator ---
 var table = new Tabulator("#birth-table", {
-    ajaxURL: "/api/birthevent/",
+    ajaxURL: "{% url 'birthevent-data-api' %}",
+    ajaxResponse: function(url, params, response) {
+        return response;
+    },
     layout: "fitColumns",
     responsiveLayout: "collapse",
     addRowPos: "top",
@@ -123,9 +167,49 @@ var table = new Tabulator("#birth-table", {
         {column: "date", dir: "desc"},
     ],
     columns: [
-        {title: "Mother Earing", field: "mother", minWidth: 100},
+        {title: "ID", field: "id", width: 55, hozAlign: "center"},
+        {title: "Mother", field: "mother", minWidth: 100},
         {title: "Birthdate", field: "date", sorter: "date", minWidth: 100},
-        {title: "Lambs", field: "lambs", minWidth: 120},
+        {
+            title: "Lambs",
+            field: "lambs",
+            minWidth: 140,
+            formatter: function(cell) {
+                const lambs = cell.getValue();
+                if (!lambs || lambs.length === 0) return '<span class="text-muted">none</span>';
+                return lambs.map(function(tag) {
+                    return '<span class="badge" style="background: var(--green-100); color: var(--green-700); margin-right: 4px;">' + tag + '</span>';
+                }).join('');
+            }
+        },
+        {title: "Notes", field: "notes", minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                return val ? val : '<span class="text-muted">-</span>';
+            }
+        },
+        {
+          title: "",
+          formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',
+          width: 60,
+          hozAlign: "center",
+          headerSort: false,
+          cellClick: async (e, cell) => {
+              const rowData = cell.getRow().getData();
+              if (!confirm(`Delete birth event #${rowData.id} (mother: ${rowData.mother})?`)) return;
+
+              const response = await fetch(`/api/birthevent/${rowData.id}/`, {
+                  method: "DELETE",
+                  headers: { "X-CSRFToken": csrfToken }
+              });
+
+              if (response.ok) {
+                  cell.getRow().delete();
+              } else {
+                  alert("Failed to delete birth event.");
+              }
+          }
+        }
     ],
 });
 </script>
