@@ -2,3 +2,5 @@
 venv/
 __pycache__/
 *.pyc
+code_review.txt
+ROADMAP.txt
