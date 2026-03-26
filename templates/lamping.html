@@ -168,7 +168,13 @@ var table = new Tabulator("#birth-table", {
     ],
     columns: [
         {title: "ID", field: "id", width: 55, hozAlign: "center"},
-        {title: "Mother", field: "mother", minWidth: 100},
+        {title: "Mother", field: "mother", minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (!val) return '—';
+                return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
+            }
+        },
         {title: "Birthdate", field: "date", sorter: "date", minWidth: 100},
         {
             title: "Lambs",
@@ -178,7 +184,7 @@ var table = new Tabulator("#birth-table", {
                 const lambs = cell.getValue();
                 if (!lambs || lambs.length === 0) return '<span class="text-muted">none</span>';
                 return lambs.map(function(tag) {
-                    return '<span class="badge" style="background: var(--green-100); color: var(--green-700); margin-right: 4px;">' + tag + '</span>';
+                    return '<a href="#" onclick="event.preventDefault(); openSheepByEaring(\'' + tag + '\')" class="badge text-decoration-none" style="background: var(--green-100); color: var(--green-700); margin-right: 4px; cursor: pointer;">' + tag + '</a>';
                 }).join('');
             }
         },

@@ -16,9 +16,20 @@
 <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2" style="background: var(--green-50);">
       <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-calendar-event me-2"></i>Calendar</h5>
-      <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createEventModal">
-        <i class="bi bi-plus-circle me-1"></i>Create Event
-      </button>
+      <div class="d-flex align-items-center gap-2">
+        {% if user_role == 'manager' or request.user.is_superuser %}
+        <div class="form-check form-switch mb-0">
+          <input class="form-check-input" type="checkbox" id="all-farms-toggle">
+          <label class="form-check-label" for="all-farms-toggle" style="font-size: 0.85rem;">All Farms</label>
+        </div>
+        {% endif %}
+        <button class="btn btn-outline-primary btn-sm" id="copy-ical-btn" title="Copy iCal feed URL">
+          <i class="bi bi-phone me-1"></i>Subscribe
+        </button>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createEventModal">
+          <i class="bi bi-plus-circle me-1"></i>Create Event
+        </button>
+      </div>
     </div>
     <div class="card-body">
       <div id="calendar"></div>
@@ -79,12 +90,35 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
+    var allFarmsToggle = document.getElementById('all-farms-toggle');
+
+    function getEventsUrl() {
+        if (allFarmsToggle && allFarmsToggle.checked) {
+            return '/api/calendar/?all_farms=true';
+        }
+        return '/api/calendar/';
+    }
 
     window.calendar = new FullCalendar.Calendar(calendarEl, {
         height: 'auto',
         timeZone: 'UTC',
         initialView: 'dayGridMonth',
-        events: '/api/calendar/',
+        events: function(info, successCallback, failureCallback) {
+            fetch(getEventsUrl())
+                .then(r => r.json())
+                .then(data => {
+                    const showAll = allFarmsToggle && allFarmsToggle.checked;
+                    const events = data.map(e => ({
+                        id: e.id,
+                        title: showAll ? `[${e.farm_name}] ${e.title}` : e.title,
+                        start: e.start,
+                        end: e.end || undefined,
+                        color: e.color || undefined,
+                    }));
+                    successCallback(events);
+                })
+                .catch(failureCallback);
+        },
         editable: true,
         selectable: true,
         themeSystem: 'bootstrap5',
@@ -96,6 +130,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     calendar.render();
+
+    // Reload events when toggle changes
+    if (allFarmsToggle) {
+        allFarmsToggle.addEventListener('change', function() {
+            calendar.refetchEvents();
+        });
+    }
 });
 
 document.getElementById('createEventForm').addEventListener('submit', function(e) {
@@ -137,6 +178,19 @@ document.getElementById('createEventForm').addEventListener('submit', function(e
     .catch(err => {
         console.error(err);
         alert('Error creating event');
+    });
+});
+
+// Copy iCal feed URL
+document.getElementById('copy-ical-btn').addEventListener('click', function() {
+    const feedUrl = window.location.origin + '/calendar/feed/{{ calendar_token }}/';
+    navigator.clipboard.writeText(feedUrl).then(() => {
+        const btn = this;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Copied!';
+        setTimeout(() => { btn.innerHTML = orig; }, 2000);
+    }).catch(() => {
+        prompt('Copy this URL and paste it in your calendar app:', feedUrl);
     });
 });
 </script>

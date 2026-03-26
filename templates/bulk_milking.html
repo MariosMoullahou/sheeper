@@ -1,0 +1,430 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block head %}
+<style>
+    .milk-box {
+        background: #fff;
+        border: 2px solid var(--green-200);
+        border-radius: 12px;
+        padding: 16px;
+        transition: all 0.3s ease;
+        cursor: grab;
+        position: relative;
+    }
+    .milk-box:active { cursor: grabbing; }
+    .milk-box.filled {
+        border-color: var(--green-400);
+        background: var(--green-50);
+        box-shadow: 0 2px 8px rgba(34, 197, 94, 0.15);
+    }
+    .milk-box.saving {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    .milk-box.saved {
+        border-color: var(--green-600);
+        background: var(--green-100);
+    }
+    .milk-box .box-number {
+        position: absolute;
+        top: 8px;
+        left: 12px;
+        font-size: 0.7rem;
+        color: var(--green-300);
+        font-weight: 600;
+    }
+    .milk-box .last-milk {
+        font-size: 0.75rem;
+        color: var(--green-600);
+        min-height: 18px;
+    }
+    .milk-box .last-milk .trend-up { color: #16a34a; }
+    .milk-box .last-milk .trend-down { color: #dc2626; }
+    .milk-box .remove-btn {
+        position: absolute;
+        top: 6px;
+        right: 8px;
+        background: none;
+        border: none;
+        color: #ccc;
+        cursor: pointer;
+        font-size: 0.8rem;
+        padding: 2px 6px;
+    }
+    .milk-box .earing-input.duplicate {
+        border-color: #ef4444;
+        background: #fef2f2;
+    }
+    .milk-box .duplicate-msg {
+        font-size: 0.65rem;
+        color: #ef4444;
+        display: none;
+    }
+    .milk-box .earing-input.duplicate + .duplicate-msg { display: block; }
+    .milk-box .remove-btn:hover { color: #ef4444; }
+    .milk-box.drag-over {
+        border-color: var(--green-500);
+        background: var(--green-50);
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.3);
+    }
+    .milk-box.dragging {
+        opacity: 0.4;
+        border: 2px dashed var(--green-400);
+    }
+</style>
+{% endblock %}
+
+{% block page %}
+<div class="card shadow-sm mb-3">
+    <div class="card-header d-flex align-items-center justify-content-between" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+        <h5 class="mb-0 text-white"><i class="bi bi-grid-3x3-gap-fill me-2"></i>Bulk Milking</h5>
+        <div class="d-flex gap-2 align-items-center">
+            <input type="date" class="form-control form-control-sm" id="bulk-date" style="width: 160px;">
+            <button class="btn btn-sm btn-light" id="add-box-btn" title="Add box">
+                <i class="bi bi-plus-lg"></i>
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div id="form-error" class="alert alert-danger d-none mb-3" role="alert"></div>
+        <div id="form-success" class="alert alert-success d-none mb-3" role="alert"></div>
+
+        <div class="row g-3" id="milk-grid">
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+            <button class="btn btn-success flex-grow-1" id="save-all-btn">
+                <i class="bi bi-check-lg me-1"></i>Save All
+            </button>
+            <button class="btn btn-outline-secondary" id="clear-all-btn">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Clear
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]') ?
+    document.querySelector('[name=csrfmiddlewaretoken]').value : '{{ csrf_token }}';
+const grid = document.getElementById('milk-grid');
+const formError = document.getElementById('form-error');
+const formSuccess = document.getElementById('form-success');
+
+// Set default date to today
+document.getElementById('bulk-date').valueAsDate = new Date();
+
+// Cache for last milk measurements
+let lastMilkCache = {};
+
+// Drag-and-drop state
+let draggedBox = null;
+
+// Load last milk data for all sheep
+async function loadLastMilkData() {
+    try {
+        const response = await fetch('/api/milk/');
+        if (!response.ok) return;
+        const data = await response.json();
+        // Group by sheep earing, keep only the latest
+        lastMilkCache = {};
+        data.sort((a, b) => b.date.localeCompare(a.date));
+        for (const record of data) {
+            if (!lastMilkCache[record.sheep]) {
+                lastMilkCache[record.sheep] = record;
+            }
+        }
+    } catch (e) { /* silent */ }
+}
+
+// Load positions from localStorage
+function loadPositions() {
+    try {
+        const saved = localStorage.getItem('bulk_milking_positions');
+        return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+}
+
+function savePositions() {
+    const positions = [];
+    grid.querySelectorAll('.milk-box').forEach(box => {
+        positions.push(box.querySelector('.earing-input').value);
+    });
+    localStorage.setItem('bulk_milking_positions', JSON.stringify(positions));
+}
+
+// Check for duplicate earings across all boxes
+function checkDuplicates() {
+    const allInputs = grid.querySelectorAll('.earing-input');
+    const seen = {};
+
+    // Count occurrences
+    allInputs.forEach(input => {
+        const val = input.value.trim();
+        if (val) {
+            seen[val] = (seen[val] || 0) + 1;
+        }
+    });
+
+    // Mark duplicates
+    allInputs.forEach(input => {
+        const val = input.value.trim();
+        const isDup = val && seen[val] > 1;
+        input.classList.toggle('duplicate', isDup);
+    });
+}
+
+// Swap values between two boxes (only values, no DOM moving)
+function swapBoxValues(boxA, boxB) {
+    const earA = boxA.querySelector('.earing-input');
+    const earB = boxB.querySelector('.earing-input');
+    const milkA = boxA.querySelector('.milk-input');
+    const milkB = boxB.querySelector('.milk-input');
+
+    const tempE = earA.value;
+    earA.value = earB.value;
+    earB.value = tempE;
+
+    const tempM = milkA.value;
+    milkA.value = milkB.value;
+    milkB.value = tempM;
+
+    // Trigger UI updates
+    earA.dispatchEvent(new Event('input'));
+    earB.dispatchEvent(new Event('input'));
+}
+
+function createBox(index, earing = '') {
+    const col = document.createElement('div');
+    col.className = 'col-6';
+    col.innerHTML = `
+        <div class="milk-box" data-index="${index}" draggable="true">
+            <span class="box-number">#${index + 1}</span>
+            <button type="button" class="remove-btn" title="Remove box"><i class="bi bi-x"></i></button>
+            <div class="mb-2">
+                <input type="text" class="form-control form-control-sm earing-input"
+                    placeholder="Earing tag" value="${earing}">
+                <div class="duplicate-msg">Already used in another box</div>
+                <div class="last-milk mt-1"></div>
+            </div>
+            <div>
+                <input type="number" step="0.01" class="form-control form-control-sm milk-input"
+                    placeholder="Liters">
+            </div>
+        </div>`;
+
+    const box = col.querySelector('.milk-box');
+    const earingInput = box.querySelector('.earing-input');
+    const milkInput = box.querySelector('.milk-input');
+    const lastMilkEl = box.querySelector('.last-milk');
+    const removeBtn = box.querySelector('.remove-btn');
+
+    function updateBox() {
+        const hasEaring = earingInput.value.trim() !== '';
+        const hasMilk = milkInput.value.trim() !== '';
+        box.classList.toggle('filled', hasEaring && hasMilk && !earingInput.classList.contains('duplicate'));
+
+        // Show last milk comparison
+        const earing = earingInput.value.trim();
+        if (earing && lastMilkCache[earing]) {
+            const last = lastMilkCache[earing];
+            const currentMilk = parseFloat(milkInput.value);
+            let trendHtml = '';
+            if (!isNaN(currentMilk) && currentMilk > 0) {
+                const diff = currentMilk - parseFloat(last.milk);
+                if (diff > 0) {
+                    trendHtml = `<span class="trend-up"><i class="bi bi-arrow-up-short"></i>+${diff.toFixed(2)}</span>`;
+                } else if (diff < 0) {
+                    trendHtml = `<span class="trend-down"><i class="bi bi-arrow-down-short"></i>${diff.toFixed(2)}</span>`;
+                }
+            }
+            lastMilkEl.innerHTML = `<i class="bi bi-clock-history me-1"></i>${last.milk}L (${last.date}) ${trendHtml}`;
+        } else if (earing) {
+            lastMilkEl.innerHTML = '<span class="text-muted">No previous</span>';
+        } else {
+            lastMilkEl.innerHTML = '';
+        }
+
+        checkDuplicates();
+        savePositions();
+    }
+
+    earingInput.addEventListener('input', updateBox);
+    milkInput.addEventListener('input', updateBox);
+
+    removeBtn.addEventListener('click', function() {
+        col.remove();
+        renumberBoxes();
+        checkDuplicates();
+        savePositions();
+    });
+
+    // Native drag-and-drop: only swaps values, boxes stay in place
+    box.addEventListener('dragstart', function(e) {
+        draggedBox = box;
+        box.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ''); // Required for Firefox
+    });
+
+    box.addEventListener('dragend', function() {
+        box.classList.remove('dragging');
+        draggedBox = null;
+        // Clean up any leftover drag-over highlights
+        grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+
+    box.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (draggedBox && draggedBox !== box) {
+            box.classList.add('drag-over');
+        }
+    });
+
+    box.addEventListener('dragleave', function() {
+        box.classList.remove('drag-over');
+    });
+
+    box.addEventListener('drop', function(e) {
+        e.preventDefault();
+        box.classList.remove('drag-over');
+        if (draggedBox && draggedBox !== box) {
+            swapBoxValues(draggedBox, box);
+            savePositions();
+        }
+    });
+
+    if (earing) setTimeout(updateBox, 100);
+
+    return col;
+}
+
+function renumberBoxes() {
+    grid.querySelectorAll('.milk-box').forEach((box, i) => {
+        box.dataset.index = i;
+        box.querySelector('.box-number').textContent = `#${i + 1}`;
+    });
+}
+
+// Initialize grid
+async function init() {
+    await loadLastMilkData();
+
+    const saved = loadPositions();
+    const count = saved ? Math.max(saved.length, 12) : 12;
+
+    for (let i = 0; i < count; i++) {
+        const earing = saved && saved[i] ? saved[i] : '';
+        grid.appendChild(createBox(i, earing));
+    }
+}
+
+// Add box
+document.getElementById('add-box-btn').addEventListener('click', function() {
+    const count = grid.querySelectorAll('.milk-box').length;
+    grid.appendChild(createBox(count));
+    renumberBoxes();
+});
+
+// Clear all
+document.getElementById('clear-all-btn').addEventListener('click', function() {
+    if (!confirm('Clear all milk inputs? (Earing positions are kept)')) return;
+    grid.querySelectorAll('.milk-input').forEach(input => {
+        input.value = '';
+        input.dispatchEvent(new Event('input'));
+    });
+    formSuccess.classList.add('d-none');
+    formError.classList.add('d-none');
+});
+
+// Save all
+document.getElementById('save-all-btn').addEventListener('click', async function() {
+    formError.classList.add('d-none');
+    formSuccess.classList.add('d-none');
+
+    const date = document.getElementById('bulk-date').value;
+    if (!date) { showMsg(formError, 'Please select a date.'); return; }
+
+    // Collect filled boxes
+    const records = [];
+    const boxes = grid.querySelectorAll('.milk-box');
+    boxes.forEach(box => {
+        const earing = box.querySelector('.earing-input').value.trim();
+        const milk = box.querySelector('.milk-input').value.trim();
+        if (earing && milk) {
+            records.push({ sheep: earing, milk: milk, date: date, box: box });
+        }
+    });
+
+    if (records.length === 0) { showMsg(formError, 'No filled boxes to save.'); return; }
+
+    // Check for duplicates before saving
+    const dupes = grid.querySelectorAll('.earing-input.duplicate');
+    if (dupes.length > 0) { showMsg(formError, 'Fix duplicate earing tags before saving.'); return; }
+
+    let saved = 0;
+    let errors = [];
+
+    for (const record of records) {
+        record.box.classList.add('saving');
+
+        try {
+            const response = await fetch('/api/milk/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken,
+                },
+                body: JSON.stringify({ sheep: record.sheep, milk: record.milk, date: record.date })
+            });
+
+            if (response.ok) {
+                record.box.classList.remove('saving');
+                record.box.classList.add('saved');
+                record.box.querySelector('.milk-input').value = '';
+                saved++;
+            } else {
+                const err = await response.json();
+                record.box.classList.remove('saving');
+                const msg = typeof err === 'object'
+                    ? Object.values(err).flat().join(', ')
+                    : String(err);
+                errors.push(`${record.sheep}: ${msg}`);
+            }
+        } catch (e) {
+            record.box.classList.remove('saving');
+            errors.push(`${record.sheep}: Network error`);
+        }
+    }
+
+    // Refresh cache after saving
+    await loadLastMilkData();
+
+    // Update all boxes to show new last milk
+    boxes.forEach(box => {
+        box.querySelector('.earing-input').dispatchEvent(new Event('input'));
+    });
+
+    if (saved > 0) {
+        showMsg(formSuccess, `${saved} record(s) saved successfully.`);
+    }
+    if (errors.length > 0) {
+        showMsg(formError, errors.join('\n'));
+    }
+
+    // Reset saved state after a moment
+    setTimeout(() => {
+        boxes.forEach(box => box.classList.remove('saved'));
+    }, 2000);
+});
+
+function showMsg(el, msg) {
+    el.textContent = msg;
+    el.style.whiteSpace = 'pre-line';
+    el.classList.remove('d-none');
+}
+
+init();
+</script>
+{% endblock %}

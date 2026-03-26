@@ -65,6 +65,32 @@ class Milk(models.Model):
         return f"{self.sheep.earing} - {self.date} ({self.milk} liter)"
 
 
+class HealthRecord(models.Model):
+    farm = models.ForeignKey(
+        'accounts.Farm',
+        on_delete=models.CASCADE,
+        related_name='health_records',
+    )
+    sheep = models.ForeignKey(
+        Sheep,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name='health_records',
+    )
+    is_batch = models.BooleanField(default=False)
+    date = models.DateField()
+    record_type = models.CharField(max_length=100)
+    title = models.CharField(max_length=200)
+    notes = models.TextField(blank=True)
+    next_due = models.DateField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        target = 'All Sheep' if self.is_batch else self.sheep.earing
+        return f"{self.record_type}: {self.title} — {target} ({self.date})"
+
+
 class CalendarEvent(models.Model):
     farm = models.ForeignKey(
         'accounts.Farm',

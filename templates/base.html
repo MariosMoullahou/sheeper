@@ -157,7 +157,7 @@
                 <i class="bi bi-list fs-5"></i>
             </button>
             <span class="ms-2 brand-text d-flex align-items-center">
-                <img src="{% static 'img/head.png' %}" height="28" class="me-2" alt="Logo">Sheeper
+                <img src="{% static 'img/head.png' %}" height="28" class="me-2" alt="Logo" style="filter: brightness(0) invert(1);">Sheeper
             </span>
         </div>
 
@@ -178,7 +178,7 @@
         </div>
 
         <!-- Main content area -->
-        <main class="col-12 col-md-9 col-lg-10 p-3 p-md-4">
+        <main class="col-12 col-md-9 col-lg-10 p-3 p-md-4" style="min-width: 0; overflow-x: hidden;">
             <div class="container-fluid py-2 py-md-3">
                 {% block page %}{% endblock %}
             </div>
@@ -186,8 +186,241 @@
     </div>
 </div>
 
+<!-- Sheep Profile Offcanvas -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="sheepProfilePanel" style="width: 480px; max-width: 90vw;">
+    <div class="offcanvas-header" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+        <h5 class="offcanvas-title text-white">
+            <i class="bi bi-tag-fill me-2"></i><span id="sp-earing">—</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0" id="sp-body">
+        <!-- Loading -->
+        <div id="sp-loading" class="text-center py-5">
+            <div class="spinner-border text-success" role="status"></div>
+        </div>
+
+        <!-- Content (hidden until loaded) -->
+        <div id="sp-content" class="d-none">
+
+            <!-- Info Card -->
+            <div class="p-3 border-bottom" style="background: var(--green-50);">
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <small class="text-muted d-block">Gender</small>
+                        <strong id="sp-gender">—</strong>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted d-block">Birthdate</small>
+                        <strong id="sp-birthdate">—</strong>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-muted d-block">Status</small>
+                        <span id="sp-status"></span>
+                    </div>
+                </div>
+                <div class="row g-2 text-center mt-1">
+                    <div class="col-6">
+                        <small class="text-muted d-block">Mother</small>
+                        <span id="sp-mother">—</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block">Children</small>
+                        <span id="sp-children-count">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs px-3 pt-2" role="tablist" style="font-size: 0.85rem;">
+                <li class="nav-item">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#sp-tab-health">
+                        <i class="bi bi-heart-pulse me-1"></i>Health
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sp-tab-milk">
+                        <i class="bi bi-droplet me-1"></i>Milk
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sp-tab-births">
+                        <i class="bi bi-lightning me-1"></i>Births
+                    </button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sp-tab-family">
+                        <i class="bi bi-diagram-3 me-1"></i>Family
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content p-3">
+                <!-- Health Tab -->
+                <div class="tab-pane fade show active" id="sp-tab-health">
+                    <div id="sp-health-list"></div>
+                </div>
+                <!-- Milk Tab -->
+                <div class="tab-pane fade" id="sp-tab-milk">
+                    <div id="sp-milk-list"></div>
+                </div>
+                <!-- Births Tab -->
+                <div class="tab-pane fade" id="sp-tab-births">
+                    <div id="sp-births-list"></div>
+                </div>
+                <!-- Family Tab -->
+                <div class="tab-pane fade" id="sp-tab-family">
+                    <div id="sp-family-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Global sheep profile panel
+const sheepPanel = document.getElementById('sheepProfilePanel');
+const spOffcanvas = new bootstrap.Offcanvas(sheepPanel);
+
+function openSheepProfile(sheepId) {
+    document.getElementById('sp-loading').classList.remove('d-none');
+    document.getElementById('sp-content').classList.add('d-none');
+    spOffcanvas.show();
+
+    fetch(`/api/sheep/${sheepId}/profile/`)
+        .then(r => r.json())
+        .then(data => renderSheepProfile(data))
+        .catch(() => {
+            document.getElementById('sp-loading').innerHTML =
+                '<div class="text-danger py-5 text-center">Failed to load sheep data.</div>';
+        });
+}
+
+// Also support opening by earing (searches the sheep table API)
+function openSheepByEaring(earing) {
+    document.getElementById('sp-loading').classList.remove('d-none');
+    document.getElementById('sp-content').classList.add('d-none');
+    spOffcanvas.show();
+
+    fetch('/api/sheep/')
+        .then(r => r.json())
+        .then(sheepList => {
+            const sheep = sheepList.find(s => s.earing === earing);
+            if (sheep) {
+                fetch(`/api/sheep/${sheep.id}/profile/`)
+                    .then(r => r.json())
+                    .then(data => renderSheepProfile(data));
+            } else {
+                document.getElementById('sp-loading').innerHTML =
+                    '<div class="text-warning py-5 text-center">Sheep not found.</div>';
+            }
+        });
+}
+
+function renderSheepProfile(data) {
+    const info = data.info;
+
+    // Header
+    document.getElementById('sp-earing').textContent = info.earing;
+    document.getElementById('sp-gender').textContent = info.gender || '—';
+    document.getElementById('sp-birthdate').textContent = info.birthdate || '—';
+    document.getElementById('sp-status').innerHTML = info.is_active
+        ? '<span class="badge bg-success">Active</span>'
+        : '<span class="badge bg-secondary">Inactive</span>';
+
+    // Mother (clickable)
+    const motherEl = document.getElementById('sp-mother');
+    if (info.mother) {
+        motherEl.innerHTML = `<a href="#" class="text-decoration-none" style="color: var(--green-700); font-weight: 500;"
+            onclick="event.preventDefault(); openSheepProfile(${info.mother_id})">${info.mother}</a>`;
+    } else {
+        motherEl.textContent = '—';
+    }
+
+    document.getElementById('sp-children-count').textContent = data.children.length;
+
+    // Health tab
+    const healthHtml = data.health.length === 0
+        ? '<p class="text-muted">No health records.</p>'
+        : data.health.map(h => `
+            <div class="d-flex align-items-start mb-2 p-2 rounded" style="background: ${h.is_batch ? '#fff7ed' : '#f0fdf4'}; font-size: 0.85rem;">
+                <div class="flex-grow-1">
+                    <div>
+                        <span class="badge" style="background: var(--green-100); color: var(--green-700);">${h.record_type}</span>
+                        ${h.is_batch ? '<span class="badge bg-warning text-dark">Batch</span>' : ''}
+                        <strong class="ms-1">${h.title}</strong>
+                    </div>
+                    <small class="text-muted">${h.date}</small>
+                    ${h.notes ? `<div class="text-muted mt-1">${h.notes}</div>` : ''}
+                    ${h.next_due ? `<div class="mt-1"><i class="bi bi-bell me-1"></i>Next due: <span class="badge ${h.next_due <= new Date().toISOString().split('T')[0] ? 'bg-danger' : 'bg-success'}">${h.next_due}</span></div>` : ''}
+                </div>
+            </div>`).join('');
+    document.getElementById('sp-health-list').innerHTML = healthHtml;
+
+    // Milk tab
+    const milkHtml = data.milk.length === 0
+        ? '<p class="text-muted">No milk records.</p>'
+        : `<table class="table table-sm" style="font-size: 0.85rem;">
+            <thead><tr><th>Date</th><th>Liters</th></tr></thead>
+            <tbody>${data.milk.map(m =>
+                `<tr><td>${m.date}</td><td>${m.milk} L</td></tr>`
+            ).join('')}</tbody>
+           </table>`;
+    document.getElementById('sp-milk-list').innerHTML = milkHtml;
+
+    // Births tab
+    let birthsHtml = '';
+    if (data.born_in) {
+        birthsHtml += `<div class="mb-3 p-2 rounded" style="background: #eff6ff; font-size: 0.85rem;">
+            <i class="bi bi-star-fill text-primary me-1"></i><strong>Born in</strong> event on ${data.born_in.date}
+            — mother: <a href="#" onclick="event.preventDefault(); openSheepByEaring('${data.born_in.mother}')"
+                style="color: var(--green-700); font-weight: 500;">${data.born_in.mother}</a>
+        </div>`;
+    }
+    if (data.births_as_mother.length > 0) {
+        birthsHtml += data.births_as_mother.map(b => `
+            <div class="mb-2 p-2 rounded" style="background: #fefce8; font-size: 0.85rem;">
+                <strong>${b.date}</strong> — ${b.lambs.length} lamb(s)
+                ${b.notes ? `<div class="text-muted">${b.notes}</div>` : ''}
+                <div class="mt-1">${b.lambs.map(l =>
+                    `<a href="#" class="badge me-1 text-decoration-none" style="background: var(--green-100); color: var(--green-700);"
+                        onclick="event.preventDefault(); openSheepProfile(${l.id})">${l.earing}</a>`
+                ).join('')}</div>
+            </div>`).join('');
+    }
+    if (!birthsHtml) birthsHtml = '<p class="text-muted">No birth events.</p>';
+    document.getElementById('sp-births-list').innerHTML = birthsHtml;
+
+    // Family tab
+    let familyHtml = '<div style="font-size: 0.85rem;">';
+    if (info.mother) {
+        familyHtml += `<div class="mb-3"><strong><i class="bi bi-arrow-up me-1"></i>Mother:</strong>
+            <a href="#" class="text-decoration-none" style="color: var(--green-700); font-weight: 500;"
+                onclick="event.preventDefault(); openSheepProfile(${info.mother_id})">${info.mother}</a></div>`;
+    }
+    if (data.children.length > 0) {
+        familyHtml += '<div class="mb-2"><strong><i class="bi bi-arrow-down me-1"></i>Children:</strong></div>';
+        familyHtml += data.children.map(c => `
+            <div class="d-flex align-items-center mb-1 p-2 rounded" style="background: var(--green-50);">
+                <a href="#" class="text-decoration-none flex-grow-1" style="color: var(--green-700); font-weight: 500;"
+                    onclick="event.preventDefault(); openSheepProfile(${c.id})">${c.earing}</a>
+                <small class="text-muted">${c.gender === 'F' ? 'Female' : c.gender === 'M' ? 'Male' : '—'}</small>
+                <small class="text-muted ms-2">${c.birthdate || ''}</small>
+            </div>`).join('');
+    } else {
+        familyHtml += '<p class="text-muted">No children.</p>';
+    }
+    familyHtml += '</div>';
+    document.getElementById('sp-family-list').innerHTML = familyHtml;
+
+    // Show content
+    document.getElementById('sp-loading').classList.add('d-none');
+    document.getElementById('sp-content').classList.remove('d-none');
+}
+</script>
 
 {% block scripts %}{% endblock %}
 </body>

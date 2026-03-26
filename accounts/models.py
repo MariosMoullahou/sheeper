@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.conf import settings
 
@@ -14,6 +15,7 @@ ROLE_CHOICES = [
 
 class Farm(models.Model):
     name = models.CharField(max_length=200)
+    calendar_token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     members = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='farms',

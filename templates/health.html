@@ -1,0 +1,237 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page %}
+<div class="row g-3">
+
+    <!-- TABLE -->
+    <div class="col-12 col-lg-8 order-2 order-lg-1">
+      <div class="card shadow-sm">
+        <div class="card-header" style="background: var(--green-50);">
+          <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-heart-pulse-fill me-2"></i>Health Records</h5>
+        </div>
+        <div class="card-body p-0 p-md-3">
+          <div id="health-table"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div class="col-12 col-lg-4 order-1 order-lg-2">
+      <div class="card shadow-sm">
+        <div class="card-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+          <h5 class="mb-0"><i class="bi bi-plus-circle me-2"></i>New Health Record</h5>
+        </div>
+        <div class="card-body">
+          <form id="health-form">
+            {% csrf_token %}
+
+            <div class="form-check form-switch mb-3">
+              <input class="form-check-input" type="checkbox" id="is_batch" name="is_batch">
+              <label class="form-check-label" for="is_batch">Apply to all sheep</label>
+            </div>
+
+            <div class="mb-3" id="sheep-field">
+              <label class="form-label">Sheep (Earing Tag)</label>
+              <input type="text" class="form-control" name="sheep" placeholder="Earing tag">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Date</label>
+              <input type="date" class="form-control" name="date" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Type</label>
+              <input type="text" class="form-control" name="record_type" placeholder="e.g. vaccine, deworming, checkup" required list="type-suggestions">
+              <datalist id="type-suggestions"></datalist>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Title</label>
+              <input type="text" class="form-control" name="title" placeholder="e.g. Ivermectin, Foot rot treatment" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Notes</label>
+              <textarea class="form-control" name="notes" rows="2" placeholder="Dosage, symptoms, details..."></textarea>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Next Due Date</label>
+              <input type="date" class="form-control" name="next_due">
+            </div>
+
+            <div id="form-error" class="alert alert-danger d-none mb-3" role="alert"></div>
+
+            <button type="submit" class="btn btn-success w-100">
+              <i class="bi bi-check-lg me-1"></i>Save
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+</div>
+
+<script>
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+const formError = document.getElementById('form-error');
+const batchToggle = document.getElementById('is_batch');
+const sheepField = document.getElementById('sheep-field');
+
+function showError(msg) {
+    formError.textContent = msg;
+    formError.classList.remove('d-none');
+}
+function hideError() {
+    formError.classList.add('d-none');
+}
+
+// Toggle sheep field visibility
+batchToggle.addEventListener('change', function() {
+    sheepField.style.display = this.checked ? 'none' : 'block';
+    if (this.checked) sheepField.querySelector('input').value = '';
+});
+
+// Build autocomplete suggestions from existing records
+function updateTypeSuggestions(data) {
+    const types = [...new Set(data.map(r => r.record_type).filter(Boolean))];
+    const datalist = document.getElementById('type-suggestions');
+    datalist.innerHTML = types.map(t => `<option value="${t}">`).join('');
+}
+
+// Submit form
+document.getElementById('health-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    hideError();
+
+    const form = e.target;
+    const isBatch = batchToggle.checked;
+
+    const payload = {
+        is_batch: isBatch,
+        date: form.querySelector('[name=date]').value,
+        record_type: form.querySelector('[name=record_type]').value.trim(),
+        title: form.querySelector('[name=title]').value.trim(),
+        notes: form.querySelector('[name=notes]').value.trim(),
+        next_due: form.querySelector('[name=next_due]').value || null,
+    };
+
+    if (!isBatch) {
+        const sheep = form.querySelector('[name=sheep]').value.trim();
+        if (!sheep) { showError('Sheep earing tag is required for individual records.'); return; }
+        payload.sheep = sheep;
+    } else {
+        payload.sheep = null;
+    }
+
+    if (!payload.date) { showError('Date is required.'); return; }
+    if (!payload.record_type) { showError('Type is required.'); return; }
+    if (!payload.title) { showError('Title is required.'); return; }
+
+    const response = await fetch("{% url 'health-api' %}", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrfToken
+        },
+        body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+        table.replaceData();
+        form.reset();
+        sheepField.style.display = 'block';
+    } else {
+        const errors = await response.json();
+        const msg = typeof errors === 'object'
+            ? Object.entries(errors).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+            : String(errors);
+        showError(msg);
+    }
+});
+
+// Tabulator
+var table = new Tabulator("#health-table", {
+    ajaxURL: "{% url 'health-api' %}",
+    ajaxResponse: function(url, params, response) {
+        updateTypeSuggestions(response);
+        return response;
+    },
+    layout: "fitColumns",
+    responsiveLayout: "collapse",
+    addRowPos: "top",
+    pagination: "local",
+    paginationSize: 10,
+    paginationCounter: "rows",
+    movableColumns: true,
+    initialSort: [
+        {column: "date", dir: "desc"},
+    ],
+    columns: [
+        {title: "ID", field: "id", width: 55, hozAlign: "center"},
+        {
+            title: "Sheep",
+            field: "sheep",
+            minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (!val) return '<span class="badge" style="background: var(--green-600); color: white;">All Sheep</span>';
+                return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
+            }
+        },
+        {title: "Date", field: "date", sorter: "date", minWidth: 100},
+        {
+            title: "Type",
+            field: "record_type",
+            minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                return '<span class="badge" style="background: var(--green-100); color: var(--green-700);">' + val + '</span>';
+            }
+        },
+        {title: "Title", field: "title", minWidth: 120},
+        {title: "Notes", field: "notes", minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                return val ? val : '<span class="text-muted">-</span>';
+            }
+        },
+        {title: "Next Due", field: "next_due", sorter: "date", minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (!val) return '<span class="text-muted">-</span>';
+                const today = new Date().toISOString().split('T')[0];
+                const color = val <= today ? 'danger' : 'success';
+                return `<span class="badge bg-${color}">${val}</span>`;
+            }
+        },
+        {
+          title: "",
+          formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',
+          width: 60,
+          hozAlign: "center",
+          headerSort: false,
+          cellClick: async (e, cell) => {
+              const rowData = cell.getRow().getData();
+              const target = rowData.sheep || 'All Sheep';
+              if (!confirm(`Delete health record #${rowData.id} (${target} — ${rowData.title})?`)) return;
+
+              const response = await fetch(`/api/health/${rowData.id}/`, {
+                  method: "DELETE",
+                  headers: { "X-CSRFToken": csrfToken }
+              });
+
+              if (response.ok) {
+                  cell.getRow().delete();
+              } else {
+                  alert("Failed to delete health record.");
+              }
+          }
+        }
+    ],
+});
+</script>
+
+{% endblock %}

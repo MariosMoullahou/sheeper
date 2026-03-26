@@ -10,7 +10,7 @@
         <div class="card-header" style="background: var(--green-50);">
           <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-list-ul me-2"></i>Sheep List</h5>
         </div>
-        <div class="card-body p-0 p-md-3">
+        <div class="card-body p-0 p-md-3" style="overflow-x: auto;">
           <div id="sheep-table"></div>
         </div>
       </div>
@@ -104,10 +104,21 @@
             {column: "earing", dir: "asc"},
         ],
         columns: [
-            {title: "Earing", field: "earing", minWidth: 80},
+            {title: "Earing", field: "earing", minWidth: 80,
+                formatter: function(cell) {
+                    const row = cell.getRow().getData();
+                    return `<a href="#" onclick="event.preventDefault(); openSheepProfile(${row.id})" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${cell.getValue()}</a>`;
+                }
+            },
             {title: "Birthdate", field: "birthdate", sorter: "date", minWidth: 100},
             {title: "Gender", field: "gender", minWidth: 70},
-            {title: "Mother", field: "mother", minWidth: 80},
+            {title: "Mother", field: "mother", minWidth: 80,
+                formatter: function(cell) {
+                    const val = cell.getValue();
+                    if (!val) return '<span class="text-muted">—</span>';
+                    return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); text-decoration: none;">${val}</a>`;
+                }
+            },
             {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center"},
             {
               title: "",

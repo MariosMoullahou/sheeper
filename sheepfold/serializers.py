@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.db import IntegrityError
-from .models import Milk, Sheep, BirthEvent, CalendarEvent
+from .models import Milk, Sheep, BirthEvent, HealthRecord, CalendarEvent
 
 
 class MilkSerializer(serializers.ModelSerializer):
@@ -109,7 +109,52 @@ class BirthEventSerializer(serializers.ModelSerializer):
         return birth_event
 
 
+class HealthRecordSerializer(serializers.ModelSerializer):
+    sheep = serializers.SlugRelatedField(
+        slug_field='earing',
+        queryset=Sheep.objects.all(),
+        required=False,
+        allow_null=True,
+    )
+
+    class Meta:
+        model = HealthRecord
+        fields = [
+            "id", "sheep", "is_batch", "date", "record_type",
+            "title", "notes", "next_due", "is_active",
+        ]
+
+    def validate(self, data):
+        is_batch = data.get('is_batch', False)
+        sheep = data.get('sheep')
+        if not is_batch and not sheep:
+            raise serializers.ValidationError({
+                'sheep': 'Sheep is required for individual records.'
+            })
+        if is_batch:
+            data['sheep'] = None
+        return data
+
+    def create(self, validated_data):
+        record = super().create(validated_data)
+
+        # Auto-create calendar reminder when next_due is set
+        if record.next_due and record.farm:
+            target = 'All Sheep' if record.is_batch else record.sheep.earing
+            CalendarEvent.objects.create(
+                farm=record.farm,
+                title=f"{record.record_type}: {record.title} — {target}",
+                start=record.next_due,
+                color='#ef4444',
+                group_id=f'health_{record.pk}',
+            )
+
+        return record
+
+
 class CalendarEventSerializer(serializers.ModelSerializer):
+    farm_name = serializers.CharField(source='farm.name', read_only=True)
+
     class Meta:
         model = CalendarEvent
-        fields = ["id", "title", "start", "end", "group_id", "color"]
+        fields = ["id", "title", "start", "end", "group_id", "color", "farm_name"]

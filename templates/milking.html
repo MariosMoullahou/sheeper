@@ -96,7 +96,13 @@ var table = new Tabulator("#milk-table", {
     ],
     columns: [
         {title: "ID", field: "id", width: 60},
-        {title: "Sheep Earing", field: "sheep", minWidth: 100},
+        {title: "Sheep Earing", field: "sheep", minWidth: 100,
+            formatter: function(cell) {
+                const val = cell.getValue();
+                if (!val) return '—';
+                return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
+            }
+        },
         {title: "Date", field: "date", sorter: "date", minWidth: 100},
         {title: "Milk (L)", field: "milk", minWidth: 80},
         {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center"},

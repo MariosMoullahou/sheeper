@@ -1,17 +1,22 @@
+from datetime import timedelta
+
+from django.db import models
+from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
+import icalendar
 
-from .models import Sheep, BirthEvent, Milk, CalendarEvent
+from .models import Sheep, BirthEvent, Milk, HealthRecord, CalendarEvent
 from .forms import SheepForm, SheepingForm
-from .serializers import MilkSerializer, SheepData, BirthEventSerializer, CalendarEventSerializer
+from .serializers import MilkSerializer, SheepData, BirthEventSerializer, HealthRecordSerializer, CalendarEventSerializer
 from accounts.helpers import (
-    get_active_farm, role_required, api_role_required,
+    get_active_farm, get_user_role, role_required, api_role_required,
 )
-from accounts.models import ROLE_FARMER, ROLE_ANALYST, ROLE_MANAGER
+from accounts.models import Farm, ROLE_FARMER, ROLE_ANALYST, ROLE_MANAGER
 
 
 def _require_farm(request):
@@ -91,16 +96,6 @@ def homepage(request):
 
 @login_required(login_url='login')
 @role_required(ROLE_FARMER, ROLE_MANAGER)
-def sheep_detail(request, pk):
-    farm = _require_farm(request)
-    if farm is None:
-        return redirect('select_farm')
-    sheep = get_object_or_404(Sheep, pk=pk, farm=farm)
-    return render(request, "sheep_detail.html", {"sheep": sheep})
-
-
-@login_required(login_url='login')
-@role_required(ROLE_FARMER, ROLE_MANAGER)
 def sheep_create(request):
     farm = _require_farm(request)
     if farm is None:
@@ -155,11 +150,30 @@ def lamping(request):
 
 @login_required(login_url='login')
 @role_required(ROLE_FARMER, ROLE_MANAGER)
+def health_view(request):
+    farm = _require_farm(request)
+    if farm is None:
+        return redirect('select_farm')
+    sheep = Sheep.objects.filter(farm=farm)
+    return render(request, "health.html", {"sheep": sheep})
+
+
+@login_required(login_url='login')
+@role_required(ROLE_FARMER, ROLE_MANAGER)
+def bulk_milking(request):
+    farm = _require_farm(request)
+    if farm is None:
+        return redirect('select_farm')
+    return render(request, "bulk_milking.html")
+
+
+@login_required(login_url='login')
+@role_required(ROLE_FARMER, ROLE_MANAGER)
 def calendar_view(request):
     farm = _require_farm(request)
     if farm is None:
         return redirect('select_farm')
-    return render(request, "calendar.html")
+    return render(request, "calendar.html", {"calendar_token": farm.calendar_token})
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +281,121 @@ def birthevent_delete_api(request, pk):
 @login_required(login_url='login')
 @api_view(['GET', 'POST'])
 @api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def health_api(request):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        records = HealthRecord.objects.filter(farm=farm).select_related('sheep').order_by('-date')
+        serializer = HealthRecordSerializer(records, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        serializer = HealthRecordSerializer(data=request.data)
+        if serializer.is_valid():
+            sheep = serializer.validated_data.get('sheep')
+            if sheep and sheep.farm_id != farm.pk:
+                return Response(
+                    {"sheep": "This sheep does not belong to your farm."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            serializer.save(farm=farm)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required(login_url='login')
+@api_view(['DELETE'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def health_delete_api(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    record = get_object_or_404(HealthRecord, pk=pk, farm=farm)
+    record.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@login_required(login_url='login')
+@api_view(['GET'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def sheep_profile_api(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    sheep = get_object_or_404(Sheep, pk=pk, farm=farm)
+
+    # Basic info
+    info = {
+        "id": sheep.id,
+        "earing": sheep.earing,
+        "gender": sheep.get_gender_display(),
+        "gender_code": sheep.gender,
+        "birthdate": sheep.birthdate,
+        "is_active": sheep.is_active,
+        "mother": sheep.mother.earing if sheep.mother else None,
+        "mother_id": sheep.mother_id,
+    }
+
+    # Children
+    children = list(
+        sheep.children.values('id', 'earing', 'gender', 'birthdate')
+    )
+
+    # Health records (individual + batch)
+    health = list(
+        HealthRecord.objects.filter(
+            farm=farm
+        ).filter(
+            models.Q(sheep=sheep) | models.Q(is_batch=True)
+        ).order_by('-date').values(
+            'id', 'date', 'record_type', 'title', 'notes', 'next_due', 'is_batch'
+        )[:50]
+    )
+
+    # Milk records
+    milk = list(
+        Milk.objects.filter(sheep=sheep).order_by('-date').values(
+            'id', 'date', 'milk', 'is_active'
+        )[:50]
+    )
+
+    # Birth events (as mother)
+    births_as_mother = []
+    for be in BirthEvent.objects.filter(mother=sheep).prefetch_related('lambs').order_by('-date')[:20]:
+        births_as_mother.append({
+            'id': be.id,
+            'date': be.date,
+            'notes': be.notes,
+            'lambs': list(be.lambs.values('id', 'earing', 'gender')),
+        })
+
+    # Birth event where this sheep was born (as a lamb)
+    born_in = None
+    birth_event = sheep.birth_event.select_related('mother').first()
+    if birth_event:
+        born_in = {
+            'id': birth_event.id,
+            'date': birth_event.date,
+            'mother': birth_event.mother.earing,
+        }
+
+    return Response({
+        "info": info,
+        "children": children,
+        "health": health,
+        "milk": milk,
+        "births_as_mother": births_as_mother,
+        "born_in": born_in,
+    })
+
+
+@login_required(login_url='login')
+@api_view(['GET', 'POST'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
 def sheep_data_api(request):
     farm = get_active_farm(request)
     if farm is None:
@@ -294,7 +423,12 @@ def calendar_data_api(request):
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
-        events = CalendarEvent.objects.filter(farm=farm)
+        all_farms = request.query_params.get('all_farms') == 'true'
+        role = get_user_role(request.user)
+        if all_farms and (role == ROLE_MANAGER or request.user.is_superuser):
+            events = CalendarEvent.objects.select_related('farm').all()
+        else:
+            events = CalendarEvent.objects.select_related('farm').filter(farm=farm)
         serializer = CalendarEventSerializer(events, many=True)
         return Response(serializer.data)
 
@@ -304,3 +438,31 @@ def calendar_data_api(request):
             serializer.save(farm=farm)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------------------------------------------
+# iCal feed (no login — authenticated by secret token)
+# ---------------------------------------------------------------------------
+
+def calendar_feed(request, token):
+    farm = get_object_or_404(Farm, calendar_token=token)
+
+    cal = icalendar.Calendar()
+    cal.add('prodid', '-//Sheeper//Farm Calendar//EN')
+    cal.add('version', '2.0')
+    cal.add('x-wr-calname', f'Sheeper — {farm.name}')
+
+    for event in CalendarEvent.objects.filter(farm=farm):
+        vevent = icalendar.Event()
+        vevent.add('uid', f'sheeper-event-{event.pk}@sheeper')
+        vevent.add('summary', event.title)
+        vevent.add('dtstart', event.start)
+        if event.end:
+            vevent.add('dtend', event.end)
+        else:
+            vevent.add('dtend', event.start + timedelta(days=1))
+        cal.add_component(vevent)
+
+    response = HttpResponse(cal.to_ical(), content_type='text/calendar; charset=utf-8')
+    response['Content-Disposition'] = f'attachment; filename="{farm.name}.ics"'
+    return response
