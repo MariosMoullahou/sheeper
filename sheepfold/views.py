@@ -450,7 +450,7 @@ def calendar_feed(request, token):
     cal = icalendar.Calendar()
     cal.add('prodid', '-//Sheeper//Farm Calendar//EN')
     cal.add('version', '2.0')
-    cal.add('x-wr-calname', f'Sheeper — {farm.name}')
+    cal.add('x-wr-calname', f'Sheeper - {farm.name}')
 
     for event in CalendarEvent.objects.filter(farm=farm):
         vevent = icalendar.Event()
@@ -464,5 +464,4 @@ def calendar_feed(request, token):
         cal.add_component(vevent)
 
     response = HttpResponse(cal.to_ical(), content_type='text/calendar; charset=utf-8')
-    response['Content-Disposition'] = f'attachment; filename="{farm.name}.ics"'
     return response
