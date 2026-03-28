@@ -61,6 +61,8 @@
 </div>
 
 <script>
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
     document.getElementById('sheep-form').addEventListener('submit', async function(e) {
       e.preventDefault();
 
@@ -69,8 +71,6 @@
       form.querySelectorAll('input, select, textarea').forEach(input => {
           if (input.name && input.name !== 'csrfmiddlewaretoken') formData[input.name] = input.value;
       });
-
-      const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
 
       const response = await fetch("{% url 'sheep-data-api' %}", {
           method: "POST",
@@ -91,6 +91,27 @@
       }
     });
 
+    async function inlineEdit(cell, apiBase) {
+        const rowData = cell.getRow().getData();
+        const field = cell.getField();
+        let value = cell.getValue();
+        if (value === undefined || value === null) value = '';
+        const response = await fetch(`${apiBase}${rowData.id}/`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify({ [field]: value }),
+        });
+        if (!response.ok) {
+            const err = await response.json();
+            const msg = typeof err === 'object' ? Object.values(err).flat().join(', ') : String(err);
+            alert('Save failed: ' + msg);
+            cell.restoreOldValue();
+        }
+    }
+
     var table = new Tabulator("#sheep-table", {
         ajaxURL: "/api/sheep/",
         layout: "fitColumns",
@@ -104,22 +125,22 @@
             {column: "earing", dir: "asc"},
         ],
         columns: [
-            {title: "Earing", field: "earing", minWidth: 80,
+            {title: "Earing", field: "earing", minWidth: 80, editor: "input",
                 formatter: function(cell) {
                     const row = cell.getRow().getData();
                     return `<a href="#" onclick="event.preventDefault(); openSheepProfile(${row.id})" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${cell.getValue()}</a>`;
                 }
             },
-            {title: "Birthdate", field: "birthdate", sorter: "date", minWidth: 100},
-            {title: "Gender", field: "gender", minWidth: 70},
-            {title: "Mother", field: "mother", minWidth: 80,
+            {title: "Birthdate", field: "birthdate", sorter: "date", minWidth: 100, editor: "date"},
+            {title: "Gender", field: "gender", minWidth: 70, editor: "list", editorParams: {values: {"M": "M", "F": "F"}}},
+            {title: "Mother", field: "mother", minWidth: 80, editor: "input",
                 formatter: function(cell) {
                     const val = cell.getValue();
                     if (!val) return '<span class="text-muted">—</span>';
                     return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); text-decoration: none;">${val}</a>`;
                 }
             },
-            {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center"},
+            {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center", editor: "tickCross"},
             {
               title: "",
               formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',
@@ -130,7 +151,6 @@
                   const rowData = cell.getRow().getData();
                   if (!confirm(`Are you sure you want to delete sheep "${rowData.earing}"?`)) return;
 
-                  const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
                   const response = await fetch(`/api/sheep/${rowData.id}/`, {
                       method: "DELETE",
                       headers: { "X-CSRFToken": csrfToken }
@@ -144,6 +164,10 @@
               }
             }
         ],
+    });
+
+    table.on("cellEdited", function(cell) {
+        inlineEdit(cell, '/api/sheep/');
     });
 </script>
 {% endblock %}

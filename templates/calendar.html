@@ -87,10 +87,64 @@
   </div>
 </div>
 
+<!-- Edit Event Modal -->
+<div class="modal fade" id="editEventModal" tabindex="-1">
+  <div class="modal-dialog">
+    <form id="editEventForm">
+      <input type="hidden" id="edit-event-id">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Event</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="edit-title" class="form-label">Title</label>
+            <input type="text" class="form-control" id="edit-title" required>
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-6 mb-3">
+              <label for="edit-start" class="form-label">Start Date</label>
+              <input type="date" class="form-control" id="edit-start" required>
+            </div>
+            <div class="col-sm-6 mb-3">
+              <label for="edit-end" class="form-label">End Date & Time</label>
+              <input type="datetime-local" class="form-control" id="edit-end">
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-sm-6 mb-3">
+              <label for="edit-group_id" class="form-label">Group ID</label>
+              <input type="text" class="form-control" id="edit-group_id">
+            </div>
+            <div class="col-sm-6 mb-3">
+              <label for="edit-color" class="form-label">Color</label>
+              <input type="color" class="form-control form-control-color w-100" id="edit-color" value="#3788d8">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-danger me-auto" id="delete-event-btn">
+            <i class="bi bi-trash me-1"></i>Delete
+          </button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>Save Changes
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var allFarmsToggle = document.getElementById('all-farms-toggle');
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Store raw event data for editing
+    var eventDataMap = {};
 
     function getEventsUrl() {
         if (allFarmsToggle && allFarmsToggle.checked) {
@@ -108,6 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(r => r.json())
                 .then(data => {
                     const showAll = allFarmsToggle && allFarmsToggle.checked;
+                    data.forEach(e => { eventDataMap[e.id] = e; });
                     const events = data.map(e => ({
                         id: e.id,
                         title: showAll ? `[${e.farm_name}] ${e.title}` : e.title,
@@ -126,6 +181,34 @@ document.addEventListener('DOMContentLoaded', function() {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,listWeek'
+        },
+        eventClick: function(info) {
+            info.jsEvent.preventDefault();
+            var raw = eventDataMap[info.event.id];
+            if (!raw) return;
+
+            // Populate edit modal
+            document.getElementById('edit-event-id').value = raw.id;
+            document.getElementById('edit-title').value = raw.title;
+            document.getElementById('edit-start').value = raw.start;
+            document.getElementById('edit-end').value = raw.end || '';
+            document.getElementById('edit-group_id').value = raw.group_id || '';
+            document.getElementById('edit-color').value = raw.color || '#3788d8';
+
+            new bootstrap.Modal(document.getElementById('editEventModal')).show();
+        },
+        eventDrop: function(info) {
+            // Drag to reschedule
+            var newStart = info.event.startStr;
+            var newEnd = info.event.endStr || null;
+            fetch('/api/calendar/' + info.event.id + '/', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+                body: JSON.stringify({ start: newStart, end: newEnd }),
+            }).then(r => {
+                if (!r.ok) { info.revert(); alert('Failed to move event.'); }
+                else { r.json().then(d => { eventDataMap[d.id] = d; }); }
+            });
         }
     });
 
@@ -137,6 +220,50 @@ document.addEventListener('DOMContentLoaded', function() {
             calendar.refetchEvents();
         });
     }
+
+    // Edit modal: save
+    document.getElementById('editEventForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var id = document.getElementById('edit-event-id').value;
+        var payload = {
+            title: document.getElementById('edit-title').value,
+            start: document.getElementById('edit-start').value,
+            end: document.getElementById('edit-end').value || null,
+            group_id: document.getElementById('edit-group_id').value,
+            color: document.getElementById('edit-color').value,
+        };
+
+        fetch('/api/calendar/' + id + '/', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
+            body: JSON.stringify(payload),
+        })
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(data => {
+            eventDataMap[data.id] = data;
+            bootstrap.Modal.getInstance(document.getElementById('editEventModal')).hide();
+            calendar.refetchEvents();
+        })
+        .catch(() => alert('Failed to update event.'));
+    });
+
+    // Edit modal: delete
+    document.getElementById('delete-event-btn').addEventListener('click', function() {
+        var id = document.getElementById('edit-event-id').value;
+        if (!confirm('Delete this event?')) return;
+
+        fetch('/api/calendar/' + id + '/', {
+            method: 'DELETE',
+            headers: { 'X-CSRFToken': csrfToken },
+        })
+        .then(r => {
+            if (!r.ok) throw new Error();
+            delete eventDataMap[id];
+            bootstrap.Modal.getInstance(document.getElementById('editEventModal')).hide();
+            calendar.refetchEvents();
+        })
+        .catch(() => alert('Failed to delete event.'));
+    });
 });
 
 document.getElementById('createEventForm').addEventListener('submit', function(e) {

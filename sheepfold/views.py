@@ -208,29 +208,51 @@ def milking_api(request):
 
 
 @login_required(login_url='login')
-@api_view(['DELETE'])
+@api_view(['PUT', 'DELETE'])
 @api_role_required(ROLE_FARMER, ROLE_MANAGER)
-def milk_delete_api(request, pk):
+def milk_detail_api(request, pk):
     farm = get_active_farm(request)
     if farm is None:
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     milk = get_object_or_404(Milk, pk=pk, sheep__farm=farm)
-    milk.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == 'DELETE':
+        milk.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = MilkSerializer(milk, data=request.data, partial=True)
+    if serializer.is_valid():
+        sheep = serializer.validated_data.get('sheep', milk.sheep)
+        if sheep.farm_id != farm.pk:
+            return Response(
+                {"sheep": "This sheep does not belong to your farm."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @login_required(login_url='login')
-@api_view(['DELETE'])
+@api_view(['PUT', 'DELETE'])
 @api_role_required(ROLE_FARMER, ROLE_MANAGER)
-def sheep_delete_api(request, pk):
+def sheep_detail_api(request, pk):
     farm = get_active_farm(request)
     if farm is None:
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     sheep = get_object_or_404(Sheep, pk=pk, farm=farm)
-    sheep.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == 'DELETE':
+        sheep.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = SheepData(sheep, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @login_required(login_url='login')
@@ -266,16 +288,32 @@ def birthevent_api(request):
 
 
 @login_required(login_url='login')
-@api_view(['DELETE'])
+@api_view(['PUT', 'DELETE'])
 @api_role_required(ROLE_FARMER, ROLE_MANAGER)
-def birthevent_delete_api(request, pk):
+def birthevent_detail_api(request, pk):
     farm = get_active_farm(request)
     if farm is None:
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     event = get_object_or_404(BirthEvent, pk=pk, mother__farm=farm)
-    event.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == 'DELETE':
+        event.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # Only allow editing date and notes (mother/lambs are complex)
+    data = {}
+    if 'date' in request.data:
+        data['date'] = request.data['date']
+    if 'notes' in request.data:
+        data['notes'] = request.data['notes']
+
+    for key, value in data.items():
+        setattr(event, key, value)
+    event.save()
+
+    serializer = BirthEventSerializer(event)
+    return Response(serializer.data)
 
 
 @login_required(login_url='login')
@@ -306,16 +344,30 @@ def health_api(request):
 
 
 @login_required(login_url='login')
-@api_view(['DELETE'])
+@api_view(['PUT', 'DELETE'])
 @api_role_required(ROLE_FARMER, ROLE_MANAGER)
-def health_delete_api(request, pk):
+def health_detail_api(request, pk):
     farm = get_active_farm(request)
     if farm is None:
         return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
 
     record = get_object_or_404(HealthRecord, pk=pk, farm=farm)
-    record.delete()
-    return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if request.method == 'DELETE':
+        record.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = HealthRecordSerializer(record, data=request.data, partial=True)
+    if serializer.is_valid():
+        sheep = serializer.validated_data.get('sheep', record.sheep)
+        if sheep and sheep.farm_id != farm.pk:
+            return Response(
+                {"sheep": "This sheep does not belong to your farm."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @login_required(login_url='login')
@@ -438,6 +490,27 @@ def calendar_data_api(request):
             serializer.save(farm=farm)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required(login_url='login')
+@api_view(['PUT', 'DELETE'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def calendar_detail_api(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    event = get_object_or_404(CalendarEvent, pk=pk, farm=farm)
+
+    if request.method == 'DELETE':
+        event.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    serializer = CalendarEventSerializer(event, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 # ---------------------------------------------------------------------------

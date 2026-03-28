@@ -152,6 +152,27 @@ document.getElementById('health-form').addEventListener('submit', async function
     }
 });
 
+async function inlineEdit(cell, apiBase) {
+    const rowData = cell.getRow().getData();
+    const field = cell.getField();
+    let value = cell.getValue();
+    if (value === undefined || value === null) value = '';
+    const response = await fetch(`${apiBase}${rowData.id}/`, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken,
+        },
+        body: JSON.stringify({ [field]: value }),
+    });
+    if (!response.ok) {
+        const err = await response.json();
+        const msg = typeof err === 'object' ? Object.values(err).flat().join(', ') : String(err);
+        alert('Save failed: ' + msg);
+        cell.restoreOldValue();
+    }
+}
+
 // Tabulator
 var table = new Tabulator("#health-table", {
     ajaxURL: "{% url 'health-api' %}",
@@ -175,30 +196,32 @@ var table = new Tabulator("#health-table", {
             title: "Sheep",
             field: "sheep",
             minWidth: 100,
+            editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (!val) return '<span class="badge" style="background: var(--green-600); color: white;">All Sheep</span>';
                 return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
             }
         },
-        {title: "Date", field: "date", sorter: "date", minWidth: 100},
+        {title: "Date", field: "date", sorter: "date", minWidth: 100, editor: "date"},
         {
             title: "Type",
             field: "record_type",
             minWidth: 100,
+            editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 return '<span class="badge" style="background: var(--green-100); color: var(--green-700);">' + val + '</span>';
             }
         },
-        {title: "Title", field: "title", minWidth: 120},
-        {title: "Notes", field: "notes", minWidth: 100,
+        {title: "Title", field: "title", minWidth: 120, editor: "input"},
+        {title: "Notes", field: "notes", minWidth: 100, editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 return val ? val : '<span class="text-muted">-</span>';
             }
         },
-        {title: "Next Due", field: "next_due", sorter: "date", minWidth: 100,
+        {title: "Next Due", field: "next_due", sorter: "date", minWidth: 100, editor: "date",
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (!val) return '<span class="text-muted">-</span>';
@@ -231,6 +254,10 @@ var table = new Tabulator("#health-table", {
           }
         }
     ],
+});
+
+table.on("cellEdited", function(cell) {
+    inlineEdit(cell, '/api/health/');
 });
 </script>
 
