@@ -7,8 +7,11 @@
     <!-- TABLE -->
     <div class="col-12 col-lg-8 order-2 order-lg-1">
       <div class="card shadow-sm">
-        <div class="card-header" style="background: var(--green-50);">
+        <div class="card-header d-flex justify-content-between align-items-center" style="background: var(--green-50);">
           <h5 class="mb-0" style="color: var(--green-800);"><i class="bi bi-list-ul me-2"></i>Sheep List</h5>
+          <button id="btn-recalculate" class="btn btn-sm btn-outline-secondary" title="Recalculate groups based on milk records">
+            <i class="bi bi-arrow-repeat me-1"></i>Recalculate Groups
+          </button>
         </div>
         <div class="card-body p-0 p-md-3" style="overflow-x: auto;">
           <div id="sheep-table"></div>
@@ -61,6 +64,22 @@
 </div>
 
 <script>
+    const GROUP_COLORS = {
+        high:  { bg: '#dcfce7', text: '#166534' },
+        med:   { bg: '#fef9c3', text: '#854d0e' },
+        low:   { bg: '#ffedd5', text: '#9a3412' },
+        dry:   { bg: '#f1f5f9', text: '#475569' },
+        ram:   { bg: '#ede9fe', text: '#5b21b6' },
+        ready: { bg: '#fce7f3', text: '#9d174d' },
+    };
+
+    function groupBadge(value) {
+        if (!value) return '<span class="text-muted">—</span>';
+        const c = GROUP_COLORS[value] || { bg: '#e5e7eb', text: '#374151' };
+        const label = value.charAt(0).toUpperCase() + value.slice(1);
+        return `<span style="background:${c.bg};color:${c.text};padding:2px 8px;border-radius:999px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+    }
+
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
     document.getElementById('sheep-form').addEventListener('submit', async function(e) {
@@ -114,33 +133,41 @@
 
     var table = new Tabulator("#sheep-table", {
         ajaxURL: "/api/sheep/",
-        layout: "fitColumns",
-        responsiveLayout: "collapse",
+        layout: "fitDataFill",
+        height: "520px",
         addRowPos: "top",
         pagination: "local",
-        paginationSize: 10,
+        paginationSize: 15,
         paginationCounter: "rows",
         movableColumns: true,
         initialSort: [
             {column: "earing", dir: "asc"},
         ],
         columns: [
-            {title: "Earing", field: "earing", minWidth: 80, editor: "input",
+            {title: "Earing", field: "earing", sorter: "string", width: 110, editor: "input",
                 formatter: function(cell) {
                     const row = cell.getRow().getData();
                     return `<a href="#" onclick="event.preventDefault(); openSheepProfile(${row.id})" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${cell.getValue()}</a>`;
                 }
             },
-            {title: "Birthdate", field: "birthdate", sorter: "date", minWidth: 100, editor: "date"},
-            {title: "Gender", field: "gender", minWidth: 70, editor: "list", editorParams: {values: {"M": "M", "F": "F"}}},
-            {title: "Mother", field: "mother", minWidth: 80, editor: "input",
+            {title: "Birthdate", field: "birthdate", sorter: "date", width: 120, editor: "date"},
+            {title: "Gender", field: "gender", sorter: "string", width: 90, editor: "list", editorParams: {values: {"M": "M", "F": "F"}}},
+            {title: "Mother", field: "mother", sorter: "string", width: 110, editor: "input",
                 formatter: function(cell) {
                     const val = cell.getValue();
                     if (!val) return '<span class="text-muted">—</span>';
                     return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); text-decoration: none;">${val}</a>`;
                 }
             },
-            {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center", editor: "tickCross"},
+            {title: "Group", field: "group", sorter: "string", width: 140,
+                formatter: function(cell) { return groupBadge(cell.getValue()); },
+                headerFilter: "list",
+                headerFilterParams: {
+                    values: {"": "All", "high": "High", "med": "Med", "low": "Low", "dry": "Dry", "ram": "Ram", "ready": "Ready for Birth"},
+                    clearable: true,
+                },
+            },
+            {title: "Active", field: "is_active", formatter: "tickCross", width: 80, hozAlign: "center", editor: "tickCross"},
             {
               title: "",
               formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',
@@ -168,6 +195,26 @@
 
     table.on("cellEdited", function(cell) {
         inlineEdit(cell, '/api/sheep/');
+    });
+
+    document.getElementById('btn-recalculate').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Recalculating...';
+        try {
+            const res = await fetch("{% url 'groups-recalculate' %}", {
+                method: 'POST',
+                headers: { 'X-CSRFToken': csrfToken },
+            });
+            if (res.ok) {
+                await table.replaceData();
+            } else {
+                alert('Recalculation failed.');
+            }
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i>Recalculate Groups';
+        }
     });
 </script>
 {% endblock %}

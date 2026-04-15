@@ -177,30 +177,31 @@ var table = new Tabulator("#birth-table", {
     ajaxResponse: function(url, params, response) {
         return response;
     },
-    layout: "fitColumns",
-    responsiveLayout: "collapse",
+    layout: "fitDataFill",
+    height: "520px",
     addRowPos: "top",
     pagination: "local",
-    paginationSize: 10,
+    paginationSize: 15,
     paginationCounter: "rows",
     movableColumns: true,
     initialSort: [
         {column: "date", dir: "desc"},
     ],
     columns: [
-        {title: "ID", field: "id", width: 55, hozAlign: "center"},
-        {title: "Mother", field: "mother", minWidth: 100,
+        {title: "ID", field: "id", sorter: "number", width: 65, hozAlign: "center"},
+        {title: "Mother", field: "mother", sorter: "string", width: 120,
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (!val) return '—';
                 return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
             }
         },
-        {title: "Birthdate", field: "date", sorter: "date", minWidth: 100, editor: "date"},
+        {title: "Birthdate", field: "date", sorter: "date", width: 120, editor: "date"},
         {
             title: "Lambs",
             field: "lambs",
-            minWidth: 140,
+            width: 200,
+            headerSort: false,
             formatter: function(cell) {
                 const lambs = cell.getValue();
                 if (!lambs || lambs.length === 0) return '<span class="text-muted">none</span>';
@@ -209,7 +210,7 @@ var table = new Tabulator("#birth-table", {
                 }).join('');
             }
         },
-        {title: "Notes", field: "notes", minWidth: 100, editor: "input",
+        {title: "Notes", field: "notes", sorter: "string", minWidth: 150, editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 return val ? val : '<span class="text-muted">-</span>';

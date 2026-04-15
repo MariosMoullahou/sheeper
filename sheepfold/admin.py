@@ -1,11 +1,17 @@
 from django.contrib import admin
-from .models import Sheep, BirthEvent, Milk, CalendarEvent
+from .models import Sheep, BirthEvent, Milk, CalendarEvent, FarmMilkSettings
+
+
+@admin.register(FarmMilkSettings)
+class FarmMilkSettingsAdmin(admin.ModelAdmin):
+    list_display = ('farm', 'period_days', 'high_threshold', 'med_threshold', 'low_threshold')
+    list_select_related = ('farm',)
 
 
 @admin.register(Sheep)
 class SheepAdmin(admin.ModelAdmin):
-    list_display = ('earing', 'farm', 'gender', 'birthdate', 'is_active')
-    list_filter = ('farm', 'gender', 'is_active')
+    list_display = ('earing', 'farm', 'gender', 'group', 'ready_for_birth', 'birthdate', 'is_active')
+    list_filter = ('farm', 'gender', 'group', 'is_active')
     search_fields = ('earing',)
 
 

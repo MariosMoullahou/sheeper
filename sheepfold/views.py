@@ -2,6 +2,8 @@ from datetime import timedelta
 
 from django.db import models
 from django.http import HttpResponse
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
@@ -11,6 +13,7 @@ from rest_framework import status
 import icalendar
 
 from .models import Sheep, BirthEvent, Milk, HealthRecord, CalendarEvent
+from .services import assign_groups
 from .forms import SheepForm, SheepingForm
 from .serializers import MilkSerializer, SheepData, BirthEventSerializer, HealthRecordSerializer, CalendarEventSerializer
 from accounts.helpers import (
@@ -390,6 +393,8 @@ def sheep_profile_api(request, pk):
         "is_active": sheep.is_active,
         "mother": sheep.mother.earing if sheep.mother else None,
         "mother_id": sheep.mother_id,
+        "group": sheep.group,
+        "ready_for_birth": sheep.ready_for_birth,
     }
 
     # Children
@@ -443,6 +448,90 @@ def sheep_profile_api(request, pk):
         "births_as_mother": births_as_mother,
         "born_in": born_in,
     })
+
+
+@login_required(login_url='login')
+@role_required(ROLE_FARMER, ROLE_MANAGER)
+def sheep_export_excel(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return redirect('select_farm')
+
+    sheep = get_object_or_404(Sheep, pk=pk, farm=farm)
+
+    wb = openpyxl.Workbook()
+
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(fill_type='solid', fgColor='2D6A4F')
+    center = Alignment(horizontal='center')
+
+    def style_header_row(ws, row=1):
+        for cell in ws[row]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = center
+
+    def auto_width(ws):
+        for col in ws.columns:
+            max_len = max((len(str(c.value)) if c.value else 0) for c in col)
+            ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    # --- Sheet 1: Info ---
+    ws_info = wb.active
+    ws_info.title = 'Info'
+    ws_info.append(['Field', 'Value'])
+    style_header_row(ws_info)
+    rows = [
+        ('Earing', sheep.earing),
+        ('Gender', sheep.get_gender_display()),
+        ('Birthdate', str(sheep.birthdate) if sheep.birthdate else ''),
+        ('Active', 'Yes' if sheep.is_active else 'No'),
+        ('Group', sheep.get_group_display() if sheep.group else ''),
+        ('Ready for Birth', 'Yes' if sheep.ready_for_birth else 'No'),
+        ('Mother', sheep.mother.earing if sheep.mother else ''),
+        ('Farm', farm.name),
+    ]
+    for row in rows:
+        ws_info.append(row)
+    auto_width(ws_info)
+
+    # --- Sheet 2: Milk ---
+    ws_milk = wb.create_sheet('Milk Records')
+    ws_milk.append(['Date', 'Liters', 'Active'])
+    style_header_row(ws_milk)
+    for m in Milk.objects.filter(sheep=sheep).order_by('-date'):
+        ws_milk.append([str(m.date), float(m.milk), 'Yes' if m.is_active else 'No'])
+    auto_width(ws_milk)
+
+    # --- Sheet 3: Health ---
+    ws_health = wb.create_sheet('Health Records')
+    ws_health.append(['Date', 'Type', 'Title', 'Notes', 'Next Due', 'Batch'])
+    style_header_row(ws_health)
+    for h in HealthRecord.objects.filter(farm=farm).filter(
+        models.Q(sheep=sheep) | models.Q(is_batch=True)
+    ).order_by('-date'):
+        ws_health.append([
+            str(h.date), h.record_type, h.title, h.notes,
+            str(h.next_due) if h.next_due else '', 'Yes' if h.is_batch else 'No',
+        ])
+    auto_width(ws_health)
+
+    # --- Sheet 4: Births (as mother) ---
+    ws_births = wb.create_sheet('Births as Mother')
+    ws_births.append(['Date', 'Lambs', 'Notes'])
+    style_header_row(ws_births)
+    for be in BirthEvent.objects.filter(mother=sheep).prefetch_related('lambs').order_by('-date'):
+        lambs = ', '.join(l.earing for l in be.lambs.all())
+        ws_births.append([str(be.date), lambs, be.notes])
+    auto_width(ws_births)
+
+    # --- Response ---
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="sheep_{sheep.earing}.xlsx"'
+    wb.save(response)
+    return response
 
 
 @login_required(login_url='login')
@@ -511,6 +600,21 @@ def calendar_detail_api(request, pk):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------------------------------------------
+# Group recalculation
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+@api_view(['POST'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def recalculate_groups_api(request):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({'error': 'No active farm'}, status=status.HTTP_400_BAD_REQUEST)
+    assign_groups(farm)
+    return Response({'status': 'ok'})
 
 
 # ---------------------------------------------------------------------------

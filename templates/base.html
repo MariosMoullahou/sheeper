@@ -17,6 +17,8 @@
     <link href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css" rel="stylesheet">
     <!-- Luxon (required by Tabulator date sorter) -->
     <script src="https://cdn.jsdelivr.net/npm/luxon@3.4.4/build/global/luxon.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <!-- Tabulator JS -->
     <script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 
@@ -220,14 +222,25 @@
                     </div>
                 </div>
                 <div class="row g-2 text-center mt-1">
-                    <div class="col-6">
+                    <div class="col-4">
                         <small class="text-muted d-block">Mother</small>
                         <span id="sp-mother">—</span>
                     </div>
-                    <div class="col-6">
+                    <div class="col-4">
                         <small class="text-muted d-block">Children</small>
                         <span id="sp-children-count">0</span>
                     </div>
+                    <div class="col-4">
+                        <small class="text-muted d-block">Group</small>
+                        <span id="sp-group"></span>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <a id="sp-export-btn" href="#" target="_blank"
+                       class="btn btn-sm w-100"
+                       style="background: var(--green-700); color: #fff; font-size: 0.82rem;">
+                        <i class="bi bi-file-earmark-excel me-1"></i>Export to Excel
+                    </a>
                 </div>
             </div>
 
@@ -262,6 +275,9 @@
                 </div>
                 <!-- Milk Tab -->
                 <div class="tab-pane fade" id="sp-tab-milk">
+                    <div id="sp-milk-chart-wrap" class="mb-3" style="display:none;">
+                        <canvas id="sp-milk-chart" height="160"></canvas>
+                    </div>
                     <div id="sp-milk-list"></div>
                 </div>
                 <!-- Births Tab -->
@@ -325,11 +341,30 @@ function renderSheepProfile(data) {
 
     // Header
     document.getElementById('sp-earing').textContent = info.earing;
+    document.getElementById('sp-export-btn').href = `/sheep/${info.id}/export/`;
     document.getElementById('sp-gender').textContent = info.gender || '—';
     document.getElementById('sp-birthdate').textContent = info.birthdate || '—';
     document.getElementById('sp-status').innerHTML = info.is_active
         ? '<span class="badge bg-success">Active</span>'
         : '<span class="badge bg-secondary">Inactive</span>';
+
+    // Group badge
+    const GROUP_COLORS = {
+        high:  { bg: '#dcfce7', text: '#166534' },
+        med:   { bg: '#fef9c3', text: '#854d0e' },
+        low:   { bg: '#ffedd5', text: '#9a3412' },
+        dry:   { bg: '#f1f5f9', text: '#475569' },
+        ram:   { bg: '#ede9fe', text: '#5b21b6' },
+        ready: { bg: '#fce7f3', text: '#9d174d' },
+    };
+    const groupEl = document.getElementById('sp-group');
+    if (info.group) {
+        const c = GROUP_COLORS[info.group] || { bg: '#e5e7eb', text: '#374151' };
+        const label = info.group.charAt(0).toUpperCase() + info.group.slice(1);
+        groupEl.innerHTML = `<span style="background:${c.bg};color:${c.text};padding:2px 8px;border-radius:999px;font-size:0.78rem;font-weight:600;">${label}</span>`;
+    } else {
+        groupEl.innerHTML = '<span class="text-muted">—</span>';
+    }
 
     // Mother (clickable)
     const motherEl = document.getElementById('sp-mother');
@@ -361,15 +396,68 @@ function renderSheepProfile(data) {
     document.getElementById('sp-health-list').innerHTML = healthHtml;
 
     // Milk tab
-    const milkHtml = data.milk.length === 0
-        ? '<p class="text-muted">No milk records.</p>'
-        : `<table class="table table-sm" style="font-size: 0.85rem;">
-            <thead><tr><th>Date</th><th>Liters</th></tr></thead>
-            <tbody>${data.milk.map(m =>
-                `<tr><td>${m.date}</td><td>${m.milk} L</td></tr>`
-            ).join('')}</tbody>
-           </table>`;
-    document.getElementById('sp-milk-list').innerHTML = milkHtml;
+    const chartWrap = document.getElementById('sp-milk-chart-wrap');
+    if (window._spMilkChart) { window._spMilkChart.destroy(); window._spMilkChart = null; }
+
+    if (data.milk.length === 0) {
+        chartWrap.style.display = 'none';
+        document.getElementById('sp-milk-list').innerHTML = '<p class="text-muted">No milk records.</p>';
+    } else {
+        // Sort ascending for chart
+        const sorted = [...data.milk].sort((a, b) => a.date.localeCompare(b.date));
+        const labels = sorted.map(m => m.date);
+        const values = sorted.map(m => parseFloat(m.milk));
+
+        chartWrap.style.display = 'block';
+        window._spMilkChart = new Chart(document.getElementById('sp-milk-chart'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Milk (L)',
+                    data: values,
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22,163,74,0.08)',
+                    borderWidth: 2,
+                    pointRadius: 3,
+                    pointBackgroundColor: '#16a34a',
+                    fill: true,
+                    tension: 0.3,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ` ${ctx.parsed.y} L`
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } },
+                        grid: { display: false }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { size: 11 }, callback: v => v + ' L' },
+                        grid: { color: '#f0fdf4' }
+                    }
+                }
+            }
+        });
+
+        // Table below chart (most recent first)
+        document.getElementById('sp-milk-list').innerHTML =
+            `<table class="table table-sm" style="font-size: 0.85rem;">
+                <thead><tr><th>Date</th><th>Liters</th></tr></thead>
+                <tbody>${data.milk.map(m =>
+                    `<tr><td>${m.date}</td><td>${m.milk} L</td></tr>`
+                ).join('')}</tbody>
+             </table>`;
+    }
 
     // Births tab
     let birthsHtml = '';

@@ -105,28 +105,28 @@ async function inlineEdit(cell, apiBase) {
 
 var table = new Tabulator("#milk-table", {
     ajaxURL: "/api/milk/",
-    layout: "fitColumns",
-    responsiveLayout: "collapse",
+    layout: "fitDataFill",
+    height: "520px",
     addRowPos: "top",
     pagination: "local",
-    paginationSize: 10,
+    paginationSize: 15,
     paginationCounter: "rows",
     movableColumns: true,
     initialSort: [
         {column: "date", dir: "desc"},
     ],
     columns: [
-        {title: "ID", field: "id", width: 60},
-        {title: "Sheep Earing", field: "sheep", minWidth: 100, editor: "input",
+        {title: "ID", field: "id", sorter: "number", width: 65, hozAlign: "center"},
+        {title: "Sheep Earing", field: "sheep", sorter: "string", width: 140, editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (!val) return '—';
                 return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
             }
         },
-        {title: "Date", field: "date", sorter: "date", minWidth: 100, editor: "date"},
-        {title: "Milk (L)", field: "milk", minWidth: 80, editor: "number", editorParams: {step: 0.01}},
-        {title: "Active", field: "is_active", formatter: "tickCross", width: 70, hozAlign: "center", editor: "tickCross"},
+        {title: "Date", field: "date", sorter: "date", width: 120, editor: "date"},
+        {title: "Milk (L)", field: "milk", sorter: "number", width: 100, editor: "number", editorParams: {step: 0.01}},
+        {title: "Active", field: "is_active", formatter: "tickCross", width: 80, hozAlign: "center", editor: "tickCross"},
         {
           title: "",
           formatter: () => '<button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>',

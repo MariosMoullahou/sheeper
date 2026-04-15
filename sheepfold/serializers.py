@@ -25,7 +25,7 @@ class SheepData(serializers.ModelSerializer):
 
     class Meta:
         model = Sheep
-        fields = ["id", "earing", "birthdate", "gender", "mother", "is_active"]
+        fields = ["id", "earing", "birthdate", "gender", "mother", "is_active", "group", "ready_for_birth"]
 
 
 class BirthEventSerializer(serializers.ModelSerializer):

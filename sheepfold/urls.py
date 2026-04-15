@@ -21,4 +21,6 @@ urlpatterns = [
     path('api/calendar/', views.calendar_data_api, name='calendar-api'),
     path('api/calendar/<int:pk>/', views.calendar_detail_api, name='calendar-detail-api'),
     path('calendar/feed/<uuid:token>/', views.calendar_feed, name='calendar-feed'),
+    path('api/groups/recalculate/', views.recalculate_groups_api, name='groups-recalculate'),
+    path('sheep/<int:pk>/export/', views.sheep_export_excel, name='sheep-export-excel'),
 ]

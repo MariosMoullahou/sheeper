@@ -180,22 +180,23 @@ var table = new Tabulator("#health-table", {
         updateTypeSuggestions(response);
         return response;
     },
-    layout: "fitColumns",
-    responsiveLayout: "collapse",
+    layout: "fitDataFill",
+    height: "520px",
     addRowPos: "top",
     pagination: "local",
-    paginationSize: 10,
+    paginationSize: 15,
     paginationCounter: "rows",
     movableColumns: true,
     initialSort: [
         {column: "date", dir: "desc"},
     ],
     columns: [
-        {title: "ID", field: "id", width: 55, hozAlign: "center"},
+        {title: "ID", field: "id", sorter: "number", width: 65, hozAlign: "center"},
         {
             title: "Sheep",
             field: "sheep",
-            minWidth: 100,
+            sorter: "string",
+            width: 120,
             editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
@@ -203,25 +204,26 @@ var table = new Tabulator("#health-table", {
                 return `<a href="#" onclick="event.preventDefault(); openSheepByEaring('${val}')" style="color: var(--green-700); font-weight: 500; text-decoration: none;">${val}</a>`;
             }
         },
-        {title: "Date", field: "date", sorter: "date", minWidth: 100, editor: "date"},
+        {title: "Date", field: "date", sorter: "date", width: 120, editor: "date"},
         {
             title: "Type",
             field: "record_type",
-            minWidth: 100,
+            sorter: "string",
+            width: 130,
             editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 return '<span class="badge" style="background: var(--green-100); color: var(--green-700);">' + val + '</span>';
             }
         },
-        {title: "Title", field: "title", minWidth: 120, editor: "input"},
-        {title: "Notes", field: "notes", minWidth: 100, editor: "input",
+        {title: "Title", field: "title", sorter: "string", width: 160, editor: "input"},
+        {title: "Notes", field: "notes", sorter: "string", width: 160, editor: "input",
             formatter: function(cell) {
                 const val = cell.getValue();
                 return val ? val : '<span class="text-muted">-</span>';
             }
         },
-        {title: "Next Due", field: "next_due", sorter: "date", minWidth: 100, editor: "date",
+        {title: "Next Due", field: "next_due", sorter: "date", width: 120, editor: "date",
             formatter: function(cell) {
                 const val = cell.getValue();
                 if (!val) return '<span class="text-muted">-</span>';

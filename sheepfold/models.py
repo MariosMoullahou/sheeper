@@ -3,6 +3,31 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 
 
+GROUP_CHOICES = [
+    ('high',  'High'),
+    ('med',   'Med'),
+    ('low',   'Low'),
+    ('dry',   'Dry'),
+    ('ram',   'Ram'),
+    ('ready', 'Ready for Birth'),
+]
+
+
+class FarmMilkSettings(models.Model):
+    farm = models.OneToOneField(
+        'accounts.Farm',
+        on_delete=models.CASCADE,
+        related_name='milk_settings',
+    )
+    period_days     = models.PositiveIntegerField(default=30)
+    high_threshold  = models.DecimalField(max_digits=5, decimal_places=2, default=2.00)
+    med_threshold   = models.DecimalField(max_digits=5, decimal_places=2, default=1.00)
+    low_threshold   = models.DecimalField(max_digits=5, decimal_places=2, default=0.50)
+
+    def __str__(self):
+        return f"Milk settings — {self.farm.name}"
+
+
 class Sheep(models.Model):
     GENDER_CHOICES = [
         ('M', 'Male'),
@@ -25,6 +50,8 @@ class Sheep(models.Model):
         related_name='children',
     )
     is_active = models.BooleanField(default=True)
+    group = models.CharField(max_length=20, choices=GROUP_CHOICES, blank=True, default='')
+    ready_for_birth = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ['farm', 'earing']
