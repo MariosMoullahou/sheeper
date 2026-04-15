@@ -7,4 +7,5 @@ packaging==26.0
 psycopg2-binary==2.9.11
 python-dotenv==1.2.1
 sqlparse==0.5.3
-tzdata==2025.2
+tzdata==2025.3
+openpyxl==3.1.5
