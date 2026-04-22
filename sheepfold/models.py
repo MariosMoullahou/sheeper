@@ -32,6 +32,7 @@ class Sheep(models.Model):
     GENDER_CHOICES = [
         ('M', 'Male'),
         ('F', 'Female'),
+        ('U', 'Unknown'),
     ]
 
     farm = models.ForeignKey(
@@ -49,6 +50,13 @@ class Sheep(models.Model):
         on_delete=models.SET_NULL,
         related_name='children',
     )
+    father = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='sired',
+    )
     is_active = models.BooleanField(default=True)
     group = models.CharField(max_length=20, choices=GROUP_CHOICES, blank=True, default='')
     ready_for_birth = models.BooleanField(default=False)
@@ -59,6 +67,8 @@ class Sheep(models.Model):
     def clean(self):
         if self.mother and self.mother.gender == 'M':
             raise ValidationError({'mother': 'Mother must be female.'})
+        if self.father and self.father.gender == 'F':
+            raise ValidationError({'father': 'Father must be male.'})
 
     def __str__(self):
         return self.earing
@@ -114,7 +124,7 @@ class HealthRecord(models.Model):
     is_active = models.BooleanField(default=True)
 
     def __str__(self):
-        target = 'All Sheep' if self.is_batch else self.sheep.earing
+        target = 'All Sheep' if self.is_batch else (self.sheep.earing if self.sheep else 'Unknown')
         return f"{self.record_type}: {self.title} — {target} ({self.date})"
 
 

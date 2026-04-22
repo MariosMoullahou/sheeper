@@ -1,6 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
 from django.db.models import Avg
+from .models import Sheep
 
 
 def assign_groups(farm):
@@ -42,4 +43,4 @@ def assign_groups(farm):
                 sheep.group = 'dry'
 
     # Bulk update for performance
-    farm.sheep.filter(is_active=True).bulk_update(sheep_qs, ['group'])
+    Sheep.objects.bulk_update(list(sheep_qs), ['group'])

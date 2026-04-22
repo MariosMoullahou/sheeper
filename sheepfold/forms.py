@@ -6,7 +6,7 @@ from .models import Sheep, BirthEvent, Milk
 class SheepForm(forms.ModelForm):
     class Meta:
         model = Sheep
-        fields = ["earing", "gender", "birthdate", "mother", "is_active"]
+        fields = ["earing", "gender", "birthdate", "mother", "father", "is_active"]
         widgets = {
             'birthdate': forms.DateInput(attrs={'type': 'date'}),
         }
@@ -16,6 +16,12 @@ class SheepForm(forms.ModelForm):
         if mother and mother.gender == 'M':
             raise ValidationError('Mother must be female.')
         return mother
+
+    def clean_father(self):
+        father = self.cleaned_data.get('father')
+        if father and father.gender == 'F':
+            raise ValidationError('Father must be male.')
+        return father
 
 
 class SheepingForm(forms.ModelForm):
@@ -56,4 +62,4 @@ class MilkForm(forms.ModelForm):
     def __init__(self, *args, farm=None, **kwargs):
         super().__init__(*args, **kwargs)
         if farm is not None:
-            self.fields['sheep'].queryset = Sheep.objects.filter(farm=farm)
+            self.fields['sheep'].queryset = Sheep.objects.filter(farm=farm).exclude(gender='M')

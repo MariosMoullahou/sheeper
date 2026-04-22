@@ -94,7 +94,7 @@
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'sheep_create' %}active{% endif %}"
                href="{% url 'sheep_create' %}">
-                <i class="bi bi-grid-3x3-gap-fill me-2"></i> Sheeps
+                <i class="bi bi-tags-fill me-2"></i> Sheeps
             </a>
         </li>
         <li class="nav-item">
@@ -106,13 +106,13 @@
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'lamping' %}active{% endif %}"
                href="{% url 'lamping' %}">
-                <i class="bi bi-lightning-fill me-2"></i> Lamping
+                <i class="bi bi-balloon-heart-fill me-2"></i> Lamping
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'milking' %}active{% endif %}"
                href="{% url 'milking' %}">
-                <i class="bi bi-droplet-fill me-2"></i> Milking
+                <i class="bi bi-droplet-half me-2"></i> Milking
             </a>
         </li>
         <li class="nav-item">
@@ -127,6 +127,12 @@
                 <i class="bi bi-heart-pulse-fill me-2"></i> Health
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link {% if request.resolver_match.url_name == 'genealogy' %}active{% endif %}"
+               href="{% url 'genealogy' %}">
+                <i class="bi bi-diagram-3-fill me-2"></i> Family Tree
+            </a>
+        </li>
         {% endif %}
     </ul>
 
@@ -137,7 +143,7 @@
 
         {% if farm %}
         <div class="d-flex align-items-center justify-content-between mb-2" style="color: #fff; font-size: 0.85rem;">
-            <span><i class="bi bi-tree-fill me-1" style="color: #86efac;"></i>{{ farm.name }}</span>
+            <span><i class="bi bi-house-door-fill me-1" style="color: #86efac;"></i>{{ farm.name }}</span>
             <a href="{% url 'switch_farm' %}" style="color: #86efac; font-size: 0.7rem; text-decoration: none;" title="Switch farm">
                 <i class="bi bi-arrow-repeat"></i>
             </a>

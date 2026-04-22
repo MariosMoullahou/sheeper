@@ -39,7 +39,7 @@
 
         body {
             font-family: 'Poppins', sans-serif;
-            background: var(--green-50) !important;
+            background: #fafaf5 !important;
         }
 
         /* Override Bootstrap primary to green */
@@ -94,11 +94,11 @@
         /* Tabulator overrides */
         .tabulator {
             border: none !important;
-            border-radius: 8px;
+            border-radius: 0 !important;
             overflow: hidden;
         }
         .tabulator .tabulator-header {
-            background: var(--green-700) !important;
+            background: linear-gradient(135deg, var(--green-600), var(--green-700)) !important;
             color: #fff !important;
             border: none !important;
         }
@@ -125,8 +125,40 @@
             background-color: #fafffe;
         }
         .tabulator .tabulator-footer {
-            background: var(--green-50) !important;
-            border-top: 2px solid var(--green-200) !important;
+            background: linear-gradient(135deg, var(--green-700), var(--green-600)) !important;
+            color: #fff !important;
+            border-top: none !important;
+        }
+        .tabulator .tabulator-footer-contents,
+        .tabulator .tabulator-paginator {
+            background: transparent !important;
+            color: #fff !important;
+        }
+        .tabulator .tabulator-footer *,
+        .tabulator .tabulator-footer .tabulator-page-counter,
+        .tabulator .tabulator-footer .tabulator-paginator,
+        .tabulator .tabulator-footer label,
+        .tabulator .tabulator-footer select {
+            color: #fff !important;
+        }
+        .tabulator .tabulator-footer select {
+            background: rgba(255,255,255,0.15) !important;
+            border: 1px solid rgba(255,255,255,0.25) !important;
+        }
+        .tabulator .tabulator-footer .tabulator-page {
+            background: rgba(255,255,255,0.15) !important;
+            border: 1px solid rgba(255,255,255,0.25) !important;
+            color: #fff !important;
+        }
+        .tabulator .tabulator-footer .tabulator-page:hover:not(:disabled) {
+            background: rgba(255,255,255,0.3) !important;
+        }
+        .tabulator .tabulator-footer .tabulator-page.active {
+            background: #fff !important;
+            color: var(--green-700) !important;
+        }
+        .tabulator .tabulator-footer .tabulator-page:disabled {
+            opacity: 0.5 !important;
         }
 
         /* Mobile sidebar */
@@ -222,15 +254,19 @@
                     </div>
                 </div>
                 <div class="row g-2 text-center mt-1">
-                    <div class="col-4">
+                    <div class="col-3">
                         <small class="text-muted d-block">Mother</small>
                         <span id="sp-mother">—</span>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
+                        <small class="text-muted d-block">Father</small>
+                        <span id="sp-father">—</span>
+                    </div>
+                    <div class="col-3">
                         <small class="text-muted d-block">Children</small>
                         <span id="sp-children-count">0</span>
                     </div>
-                    <div class="col-4">
+                    <div class="col-3">
                         <small class="text-muted d-block">Group</small>
                         <span id="sp-group"></span>
                     </div>
@@ -373,6 +409,17 @@ function renderSheepProfile(data) {
             onclick="event.preventDefault(); openSheepProfile(${info.mother_id})">${info.mother}</a>`;
     } else {
         motherEl.textContent = '—';
+    }
+
+    // Father (clickable)
+    const fatherEl = document.getElementById('sp-father');
+    if (fatherEl) {
+        if (info.father) {
+            fatherEl.innerHTML = `<a href="#" class="text-decoration-none" style="color: var(--green-700); font-weight: 500;"
+                onclick="event.preventDefault(); openSheepProfile(${info.father_id})">${info.father}</a>`;
+        } else {
+            fatherEl.textContent = '—';
+        }
     }
 
     document.getElementById('sp-children-count').textContent = data.children.length;

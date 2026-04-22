@@ -14,7 +14,7 @@ import icalendar
 
 from .models import Sheep, BirthEvent, Milk, HealthRecord, CalendarEvent
 from .services import assign_groups
-from .forms import SheepForm, SheepingForm
+from .forms import SheepForm
 from .serializers import MilkSerializer, SheepData, BirthEventSerializer, HealthRecordSerializer, CalendarEventSerializer
 from accounts.helpers import (
     get_active_farm, get_user_role, role_required, api_role_required,
@@ -41,37 +41,28 @@ def homepage(request):
     sheep = Sheep.objects.filter(farm=farm)
     today = timezone.localdate()
 
-    # Recent activity: last 10 items across sheep, milk, birth events
-    recent_sheep = (
-        Sheep.objects.filter(farm=farm)
-        .order_by('-id')[:10]
-        .values_list('earing', 'id')
-    )
+    # Recent activity: last 10 items across milk, birth events
+    # Sorted by date (then by id as tiebreaker within same date)
     recent_milk = (
         Milk.objects.filter(sheep__farm=farm)
         .select_related('sheep')
-        .order_by('-id')[:10]
+        .order_by('-date', '-id')[:10]
     )
     recent_births = (
         BirthEvent.objects.filter(mother__farm=farm)
         .select_related('mother')
-        .order_by('-id')[:10]
+        .prefetch_related('lambs')
+        .order_by('-date', '-id')[:10]
     )
 
     activity = []
-    for earing, sid in recent_sheep:
-        activity.append({
-            'icon': 'bi-plus-circle-fill',
-            'color': 'var(--green-500)',
-            'text': f'Sheep #{earing} added',
-            'type': 'sheep',
-        })
     for m in recent_milk:
         activity.append({
             'icon': 'bi-droplet-fill',
             'color': '#3b82f6',
             'text': f'Milk recorded for #{m.sheep.earing} — {m.milk}L on {m.date}',
-            'type': 'milk',
+            'date': m.date,
+            'id': m.id,
         })
     for b in recent_births:
         lamb_count = b.lambs.count()
@@ -79,8 +70,10 @@ def homepage(request):
             'icon': 'bi-lightning-fill',
             'color': '#f59e0b',
             'text': f'Birth event: #{b.mother.earing} — {lamb_count} lamb(s) on {b.date}',
-            'type': 'birth',
+            'date': b.date,
+            'id': b.id,
         })
+    activity.sort(key=lambda x: (x['date'], x['id']), reverse=True)
     activity = activity[:10]
 
     # Upcoming calendar events (next 5)
@@ -94,6 +87,9 @@ def homepage(request):
         "farm": farm,
         "activity": activity,
         "upcoming_events": upcoming_events,
+        "milk_count": Milk.objects.filter(sheep__farm=farm).count(),
+        "birth_count": BirthEvent.objects.filter(mother__farm=farm).count(),
+        "health_count": HealthRecord.objects.filter(farm=farm).count(),
     })
 
 
@@ -130,25 +126,7 @@ def lamping(request):
     if farm is None:
         return redirect('select_farm')
 
-    if request.method == 'POST':
-        form = SheepingForm(request.POST, farm=farm)
-        if form.is_valid():
-            birth_event = form.save(commit=False)
-            birth_event.save()
-
-            new_lamb_earings = request.POST.get('new_lambs', '').split(',')
-            for earing in new_lamb_earings:
-                earing = earing.strip()
-                if earing:
-                    lamb = Sheep.objects.create(earing=earing, farm=farm)
-                    birth_event.lambs.add(lamb)
-
-            form.save_m2m()
-            return redirect('homepage')
-    else:
-        form = SheepingForm(farm=farm)
-
-    return render(request, 'lamping.html', {'form': form})
+    return render(request, 'lamping.html')
 
 
 @login_required(login_url='login')
@@ -197,14 +175,8 @@ def milking_api(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = MilkSerializer(data=request.data)
+        serializer = MilkSerializer(data=request.data, context={'farm': farm})
         if serializer.is_valid():
-            sheep = serializer.validated_data['sheep']
-            if sheep.farm_id != farm.pk:
-                return Response(
-                    {"sheep": "This sheep does not belong to your farm."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -224,14 +196,8 @@ def milk_detail_api(request, pk):
         milk.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    serializer = MilkSerializer(milk, data=request.data, partial=True)
+    serializer = MilkSerializer(milk, data=request.data, partial=True, context={'farm': farm})
     if serializer.is_valid():
-        sheep = serializer.validated_data.get('sheep', milk.sheep)
-        if sheep.farm_id != farm.pk:
-            return Response(
-                {"sheep": "This sheep does not belong to your farm."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -251,7 +217,7 @@ def sheep_detail_api(request, pk):
         sheep.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    serializer = SheepData(sheep, data=request.data, partial=True)
+    serializer = SheepData(sheep, data=request.data, partial=True, context={'farm': farm})
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)
@@ -277,14 +243,8 @@ def birthevent_api(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = BirthEventSerializer(data=request.data)
+        serializer = BirthEventSerializer(data=request.data, context={'farm': farm})
         if serializer.is_valid():
-            mother = serializer.validated_data['mother']
-            if mother.farm_id != farm.pk:
-                return Response(
-                    {"mother": "This sheep does not belong to your farm."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -333,14 +293,8 @@ def health_api(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = HealthRecordSerializer(data=request.data)
+        serializer = HealthRecordSerializer(data=request.data, context={'farm': farm})
         if serializer.is_valid():
-            sheep = serializer.validated_data.get('sheep')
-            if sheep and sheep.farm_id != farm.pk:
-                return Response(
-                    {"sheep": "This sheep does not belong to your farm."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
             serializer.save(farm=farm)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -360,14 +314,8 @@ def health_detail_api(request, pk):
         record.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    serializer = HealthRecordSerializer(record, data=request.data, partial=True)
+    serializer = HealthRecordSerializer(record, data=request.data, partial=True, context={'farm': farm})
     if serializer.is_valid():
-        sheep = serializer.validated_data.get('sheep', record.sheep)
-        if sheep and sheep.farm_id != farm.pk:
-            return Response(
-                {"sheep": "This sheep does not belong to your farm."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -393,13 +341,17 @@ def sheep_profile_api(request, pk):
         "is_active": sheep.is_active,
         "mother": sheep.mother.earing if sheep.mother else None,
         "mother_id": sheep.mother_id,
+        "father": sheep.father.earing if sheep.father else None,
+        "father_id": sheep.father_id,
         "group": sheep.group,
         "ready_for_birth": sheep.ready_for_birth,
     }
 
-    # Children
+    # Children (as mother or father)
     children = list(
-        sheep.children.values('id', 'earing', 'gender', 'birthdate')
+        Sheep.objects.filter(
+            models.Q(mother=sheep) | models.Q(father=sheep)
+        ).values('id', 'earing', 'gender', 'birthdate').distinct()
     )
 
     # Health records (individual + batch)
@@ -489,6 +441,7 @@ def sheep_export_excel(request, pk):
         ('Group', sheep.get_group_display() if sheep.group else ''),
         ('Ready for Birth', 'Yes' if sheep.ready_for_birth else 'No'),
         ('Mother', sheep.mother.earing if sheep.mother else ''),
+        ('Father', sheep.father.earing if sheep.father else ''),
         ('Farm', farm.name),
     ]
     for row in rows:
@@ -548,7 +501,7 @@ def sheep_data_api(request):
         return Response(serializer.data)
 
     elif request.method == 'POST':
-        serializer = SheepData(data=request.data)
+        serializer = SheepData(data=request.data, context={'farm': farm})
         if serializer.is_valid():
             serializer.save(farm=farm)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -600,6 +553,43 @@ def calendar_detail_api(request, pk):
         serializer.save()
         return Response(serializer.data)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------------------------------------------
+# Genealogy API
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+@api_view(['GET'])
+@api_role_required(ROLE_FARMER, ROLE_MANAGER)
+def genealogy_api(request):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    sheep_qs = Sheep.objects.filter(farm=farm).select_related('mother', 'father')
+    nodes = []
+    for s in sheep_qs:
+        nodes.append({
+            'id': s.id,
+            'earing': s.earing,
+            'gender': s.gender,
+            'birthdate': str(s.birthdate) if s.birthdate else None,
+            'is_active': s.is_active,
+            'mother_id': s.mother_id,
+            'father_id': s.father_id,
+            'group': s.group,
+        })
+    return Response(nodes)
+
+
+@login_required(login_url='login')
+@role_required(ROLE_FARMER, ROLE_MANAGER)
+def genealogy_view(request):
+    farm = _require_farm(request)
+    if farm is None:
+        return redirect('select_farm')
+    return render(request, "genealogy.html")
 
 
 # ---------------------------------------------------------------------------

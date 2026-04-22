@@ -31,11 +31,16 @@
     .quick-action {
         text-decoration: none;
         color: var(--green-800);
-        border: 2px dashed var(--green-200);
-        border-radius: 12px;
-        padding: 1rem;
+        border: 2px solid var(--green-200);
+        border-radius: 10px;
+        padding: 0.6rem 0.4rem;
         text-align: center;
         transition: all 0.2s;
+        display: block;
+    }
+    .quick-action small {
+        font-size: 0.72rem;
+        line-height: 1.1;
         display: block;
     }
     .quick-action:hover {
@@ -45,7 +50,7 @@
         transform: translateY(-2px);
     }
     .quick-action i {
-        font-size: 1.5rem;
+        font-size: 1.15rem;
         color: var(--green-500);
     }
     .activity-item {
@@ -96,6 +101,21 @@
     .event-date-box .day {
         font-size: 1.1rem;
         font-weight: 600;
+    }
+    .scroll-list {
+        max-height: 320px;
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+    .scroll-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    .scroll-list::-webkit-scrollbar-thumb {
+        background: var(--green-200);
+        border-radius: 3px;
+    }
+    .scroll-list::-webkit-scrollbar-thumb:hover {
+        background: var(--green-400);
     }
 </style>
 
@@ -171,28 +191,46 @@
 <div class="mb-4">
     <h6 class="mb-3" style="color: var(--green-800);"><i class="bi bi-lightning-charge me-2"></i>Quick Actions</h6>
     <div class="row g-3">
-        <div class="col-4 col-md-3 col-lg-2">
+        <div class="col-4 col-sm-3 col-md">
             <a href="{% url 'sheep_create' %}" class="quick-action">
                 <i class="bi bi-plus-circle-fill d-block mb-1"></i>
                 <small>Add Sheep</small>
             </a>
         </div>
-        <div class="col-4 col-md-3 col-lg-2">
+        <div class="col-4 col-sm-3 col-md">
             <a href="{% url 'milking' %}" class="quick-action">
                 <i class="bi bi-droplet-fill d-block mb-1"></i>
                 <small>Record Milk</small>
             </a>
         </div>
-        <div class="col-4 col-md-3 col-lg-2">
+        <div class="col-4 col-sm-3 col-md">
             <a href="{% url 'lamping' %}" class="quick-action">
                 <i class="bi bi-lightning-fill d-block mb-1"></i>
                 <small>Log Birth</small>
             </a>
         </div>
-        <div class="col-4 col-md-3 col-lg-2">
+        <div class="col-4 col-sm-3 col-md">
             <a href="{% url 'calendar' %}" class="quick-action">
                 <i class="bi bi-calendar-event d-block mb-1"></i>
                 <small>Calendar</small>
+            </a>
+        </div>
+        <div class="col-4 col-sm-3 col-md">
+            <a href="{% url 'bulk_milking' %}" class="quick-action">
+                <i class="bi bi-stack d-block mb-1"></i>
+                <small>Bulk Milking</small>
+            </a>
+        </div>
+        <div class="col-4 col-sm-3 col-md">
+            <a href="{% url 'health' %}" class="quick-action">
+                <i class="bi bi-heart-pulse-fill d-block mb-1"></i>
+                <small>Health</small>
+            </a>
+        </div>
+        <div class="col-4 col-sm-3 col-md">
+            <a href="{% url 'genealogy' %}" class="quick-action">
+                <i class="bi bi-diagram-3-fill d-block mb-1"></i>
+                <small>Genealogy</small>
             </a>
         </div>
     </div>
@@ -208,7 +246,7 @@
                     <i class="bi bi-clock-history me-2"></i>Recent Activity
                 </h6>
             </div>
-            <div class="card-body">
+            <div class="card-body scroll-list">
                 {% if activity %}
                     {% for item in activity %}
                     <div class="activity-item">
