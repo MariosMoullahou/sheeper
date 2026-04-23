@@ -136,8 +136,8 @@
 
     var table = new Tabulator("#sheep-table", {
         ajaxURL: "/api/sheep/",
-        layout: "fitDataFill",
-        height: "520px",
+        layout: "fitColumns",
+        maxHeight: "calc(100vh - 140px)",
         addRowPos: "top",
         pagination: "local",
         paginationSize: 15,

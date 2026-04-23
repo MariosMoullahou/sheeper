@@ -145,6 +145,13 @@ STATICFILES_DIRS = [
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / "media"
+
+# Milk analysis uploads
+MILK_ANALYSIS_ALLOWED_EXTENSIONS = ['pdf', 'xlsx', 'xls', 'jpg', 'jpeg', 'png']
+MILK_ANALYSIS_MAX_UPLOAD_MB = 10
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

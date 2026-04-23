@@ -12,10 +12,12 @@ from rest_framework.response import Response
 from rest_framework import status
 import icalendar
 
-from .models import Sheep, BirthEvent, Milk, HealthRecord, CalendarEvent
+from .models import Sheep, BirthEvent, Milk, HealthRecord, CalendarEvent, MilkAnalysis
 from .services import assign_groups
-from .forms import SheepForm
-from .serializers import MilkSerializer, SheepData, BirthEventSerializer, HealthRecordSerializer, CalendarEventSerializer
+from .serializers import (
+    MilkSerializer, SheepData, BirthEventSerializer, HealthRecordSerializer,
+    CalendarEventSerializer, MilkAnalysisSerializer,
+)
 from accounts.helpers import (
     get_active_farm, get_user_role, role_required, api_role_required,
 )
@@ -99,13 +101,7 @@ def sheep_create(request):
     farm = _require_farm(request)
     if farm is None:
         return redirect('select_farm')
-    form = SheepForm(request.POST or None)
-    if form.is_valid():
-        sheep = form.save(commit=False)
-        sheep.farm = farm
-        sheep.save()
-        return redirect("homepage")
-    return render(request, "sheep_form.html", {"form": form})
+    return render(request, "sheep_form.html")
 
 
 @login_required(login_url='login')
@@ -146,6 +142,23 @@ def bulk_milking(request):
     if farm is None:
         return redirect('select_farm')
     return render(request, "bulk_milking.html")
+
+
+@login_required(login_url='login')
+@role_required(ROLE_FARMER, ROLE_ANALYST, ROLE_MANAGER)
+def milk_analysis_view(request):
+    farm = _require_farm(request)
+    if farm is None:
+        return redirect('select_farm')
+    role = get_user_role(request.user)
+    can_create = role in (ROLE_ANALYST, ROLE_MANAGER) or request.user.is_superuser
+    can_edit = can_create
+    can_delete = role == ROLE_MANAGER or request.user.is_superuser
+    return render(request, "milk_analysis.html", {
+        "can_create": can_create,
+        "can_edit": can_edit,
+        "can_delete": can_delete,
+    })
 
 
 @login_required(login_url='login')
@@ -549,6 +562,79 @@ def calendar_detail_api(request, pk):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     serializer = CalendarEventSerializer(event, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+# ---------------------------------------------------------------------------
+# Milk Analysis API
+# ---------------------------------------------------------------------------
+
+@login_required(login_url='login')
+@api_view(['GET', 'POST'])
+@api_role_required(ROLE_FARMER, ROLE_ANALYST, ROLE_MANAGER)
+def milk_analysis_api(request):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    if request.method == 'GET':
+        analyses = MilkAnalysis.objects.filter(farm=farm).select_related('created_by')
+        serializer = MilkAnalysisSerializer(analyses, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    # POST — analyst or manager only
+    role = get_user_role(request.user)
+    if not (request.user.is_superuser or role in (ROLE_ANALYST, ROLE_MANAGER)):
+        return Response(
+            {"detail": "You don't have permission to upload analyses."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = MilkAnalysisSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        serializer.save(farm=farm, created_by=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@login_required(login_url='login')
+@api_view(['GET', 'PUT', 'DELETE'])
+@api_role_required(ROLE_FARMER, ROLE_ANALYST, ROLE_MANAGER)
+def milk_analysis_detail_api(request, pk):
+    farm = get_active_farm(request)
+    if farm is None:
+        return Response({"detail": "No active farm."}, status=status.HTTP_403_FORBIDDEN)
+
+    analysis = get_object_or_404(MilkAnalysis, pk=pk, farm=farm)
+    role = get_user_role(request.user)
+    is_super = request.user.is_superuser
+
+    if request.method == 'GET':
+        serializer = MilkAnalysisSerializer(analysis, context={'request': request})
+        return Response(serializer.data)
+
+    if request.method == 'DELETE':
+        if not (is_super or role == ROLE_MANAGER):
+            return Response(
+                {"detail": "Only managers can delete analyses."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        analysis.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # PUT — analyst or manager only
+    if not (is_super or role in (ROLE_ANALYST, ROLE_MANAGER)):
+        return Response(
+            {"detail": "You don't have permission to edit analyses."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = MilkAnalysisSerializer(
+        analysis, data=request.data, partial=True, context={'request': request}
+    )
     if serializer.is_valid():
         serializer.save()
         return Response(serializer.data)

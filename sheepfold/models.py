@@ -128,6 +128,62 @@ class HealthRecord(models.Model):
         return f"{self.record_type}: {self.title} — {target} ({self.date})"
 
 
+class MilkAnalysis(models.Model):
+    """Bulk-tank lab analysis results — one row per farm sampling."""
+    farm = models.ForeignKey(
+        'accounts.Farm',
+        on_delete=models.CASCADE,
+        related_name='milk_analyses',
+    )
+    sampling_date = models.DateField()
+    analysis_date = models.DateField(null=True, blank=True)
+    lab_name = models.CharField(max_length=200, blank=True)
+    sample_ref = models.CharField(max_length=100, blank=True)
+
+    # Composition (percentages)
+    protein_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    fat_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    snf_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    lactose_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    casein_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    water_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+
+    # Physical
+    freezing_point = models.DecimalField(max_digits=6, decimal_places=4, null=True, blank=True)
+
+    # Adulteration / contamination
+    foreign_milk_pct = models.DecimalField(max_digits=6, decimal_places=3, null=True, blank=True)
+    antibiotics_detected = models.BooleanField(null=True, blank=True)
+    aflatoxin_m1 = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
+
+    # Microbiology
+    total_bacteria_count = models.BigIntegerField(null=True, blank=True)
+    scc = models.BigIntegerField(null=True, blank=True)
+    clostridia = models.BigIntegerField(null=True, blank=True)
+
+    attachment = models.FileField(upload_to='milk_analyses/%Y/%m/', null=True, blank=True)
+    notes = models.TextField(blank=True)
+
+    created_by = models.ForeignKey(
+        'auth.User',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='milk_analyses_uploaded',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-sampling_date', '-id']
+        indexes = [
+            models.Index(fields=['farm', '-sampling_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.farm.name} — {self.sampling_date}"
+
+
 class CalendarEvent(models.Model):
     farm = models.ForeignKey(
         'accounts.Farm',

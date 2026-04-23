@@ -1,0 +1,509 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block page %}
+
+<style>
+.ma-section-title {
+    color: var(--green-800);
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.6rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--green-100);
+}
+.ma-detail-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid #f4f7f4;
+    font-size: 0.88rem;
+}
+.ma-detail-row:last-child { border-bottom: none; }
+.ma-detail-label { color: #6b7280; }
+.ma-detail-value { font-weight: 500; color: #1f2937; }
+.ma-warn { color: #b45309; }
+.ma-bad  { color: #b91c1c; }
+.unit-hint { color: #94a3b8; font-size: 0.78rem; margin-left: 4px; }
+</style>
+
+<!-- ============================== -->
+<!-- DETAIL MODAL (read-only)       -->
+<!-- ============================== -->
+<div class="modal fade" id="detail-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+        <h5 class="modal-title"><i class="bi bi-clipboard2-data me-2"></i>Lab Analysis <span id="detail-id" class="ms-2 opacity-75"></span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="detail-body">
+        <!-- populated by JS -->
+      </div>
+      {% if can_edit %}
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-success" id="detail-edit-btn">
+          <i class="bi bi-pencil me-1"></i>Edit
+        </button>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ============================== -->
+<!-- UPLOAD / EDIT MODAL            -->
+<!-- ============================== -->
+{% if can_create %}
+<div class="modal fade" id="form-modal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header text-white" style="background: linear-gradient(135deg, var(--green-600), var(--green-700));">
+        <h5 class="modal-title"><i class="bi bi-upload me-2"></i><span id="form-modal-title">Upload Lab Analysis</span></h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="ma-form" enctype="multipart/form-data">
+          {% csrf_token %}
+          <input type="hidden" name="id" id="ma-id">
+
+          <!-- Metadata -->
+          <div class="ma-section-title">Sample metadata</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label for="f-sampling_date" class="form-label">Sampling date <span class="text-danger">*</span></label>
+              <input id="f-sampling_date" name="sampling_date" type="date" class="form-control" required>
+            </div>
+            <div class="col-md-3">
+              <label for="f-analysis_date" class="form-label">Analysis date</label>
+              <input id="f-analysis_date" name="analysis_date" type="date" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="f-lab_name" class="form-label">Lab name</label>
+              <input id="f-lab_name" name="lab_name" type="text" class="form-control" placeholder="e.g. ΕΛΟΓΑΚ">
+            </div>
+            <div class="col-md-3">
+              <label for="f-sample_ref" class="form-label">Sample ref</label>
+              <input id="f-sample_ref" name="sample_ref" type="text" class="form-control" placeholder="Lab reference">
+            </div>
+          </div>
+
+          <!-- Composition -->
+          <div class="ma-section-title">Composition</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-2">
+              <label for="f-fat_pct" class="form-label">Fat<span class="unit-hint">%</span></label>
+              <input id="f-fat_pct" name="fat_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label for="f-protein_pct" class="form-label">Protein<span class="unit-hint">%</span></label>
+              <input id="f-protein_pct" name="protein_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label for="f-snf_pct" class="form-label">SNF (ΣΥΑΛ)<span class="unit-hint">%</span></label>
+              <input id="f-snf_pct" name="snf_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label for="f-lactose_pct" class="form-label">Lactose<span class="unit-hint">%</span></label>
+              <input id="f-lactose_pct" name="lactose_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label for="f-casein_pct" class="form-label">Casein<span class="unit-hint">%</span></label>
+              <input id="f-casein_pct" name="casein_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-2">
+              <label for="f-water_pct" class="form-label">Water<span class="unit-hint">%</span></label>
+              <input id="f-water_pct" name="water_pct" type="number" step="0.001" class="form-control">
+            </div>
+          </div>
+
+          <!-- Physical -->
+          <div class="ma-section-title">Physical</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label for="f-freezing_point" class="form-label">Freezing point<span class="unit-hint">°C</span></label>
+              <input id="f-freezing_point" name="freezing_point" type="number" step="0.0001" class="form-control" placeholder="e.g. -0.545">
+            </div>
+          </div>
+
+          <!-- Adulteration / contamination -->
+          <div class="ma-section-title">Adulteration &amp; contamination</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label for="f-foreign_milk_pct" class="form-label">Foreign milk (cow/goat)<span class="unit-hint">%</span></label>
+              <input id="f-foreign_milk_pct" name="foreign_milk_pct" type="number" step="0.001" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="f-antibiotics_detected" class="form-label">Antibiotics</label>
+              <select id="f-antibiotics_detected" name="antibiotics_detected" class="form-select">
+                <option value="">Not tested</option>
+                <option value="false">Negative</option>
+                <option value="true">Positive</option>
+              </select>
+            </div>
+            <div class="col-md-3">
+              <label for="f-aflatoxin_m1" class="form-label">Aflatoxin M1<span class="unit-hint">ng/kg</span></label>
+              <input id="f-aflatoxin_m1" name="aflatoxin_m1" type="number" step="0.001" class="form-control">
+            </div>
+          </div>
+
+          <!-- Microbiology -->
+          <div class="ma-section-title">Microbiology</div>
+          <div class="row g-3 mb-4">
+            <div class="col-md-3">
+              <label for="f-total_bacteria_count" class="form-label">ΟΜΧ (TBC)<span class="unit-hint">CFU/mL</span></label>
+              <input id="f-total_bacteria_count" name="total_bacteria_count" type="number" step="1" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="f-scc" class="form-label">SCC<span class="unit-hint">cells/mL</span></label>
+              <input id="f-scc" name="scc" type="number" step="1" class="form-control">
+            </div>
+            <div class="col-md-3">
+              <label for="f-clostridia" class="form-label">Clostridia<span class="unit-hint">spores/L</span></label>
+              <input id="f-clostridia" name="clostridia" type="number" step="1" class="form-control">
+            </div>
+          </div>
+
+          <!-- Attachment + notes -->
+          <div class="ma-section-title">Attachment &amp; notes</div>
+          <div class="row g-3 mb-2">
+            <div class="col-md-6">
+              <label for="f-attachment" class="form-label">Lab report file</label>
+              <input id="f-attachment" name="attachment" type="file" class="form-control"
+                     accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png">
+              <small class="text-muted">PDF, Excel, or image. Max 10 MB.</small>
+              <div id="current-attachment" class="mt-1 small"></div>
+            </div>
+            <div class="col-md-6">
+              <label for="f-notes" class="form-label">Notes</label>
+              <textarea id="f-notes" name="notes" class="form-control" rows="2"></textarea>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-check-lg me-1"></i><span id="form-submit-label">Save</span>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ============================== -->
+<!-- HEADER + TABLE                 -->
+<!-- ============================== -->
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+  <h4 class="mb-0" style="color: var(--green-800);">
+    <i class="bi bi-clipboard2-data-fill me-2"></i>Milk Lab Analyses
+  </h4>
+  {% if can_create %}
+  <button class="btn btn-success btn-sm" type="button"
+          data-bs-toggle="modal" data-bs-target="#form-modal"
+          id="btn-new-analysis">
+    <i class="bi bi-plus-lg me-1"></i>Upload Analysis
+  </button>
+  {% endif %}
+</div>
+
+<div class="card shadow-sm">
+  <div class="card-body p-0">
+    <div id="ma-table"></div>
+  </div>
+</div>
+
+<script>
+const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+const CAN_EDIT   = {{ can_edit|yesno:"true,false" }};
+const CAN_DELETE = {{ can_delete|yesno:"true,false" }};
+
+// Out-of-range thresholds (advisory only)
+const RANGES = {
+    fat_pct:              { min: 3,    max: 9    },
+    protein_pct:          { min: 4,    max: 8    },
+    snf_pct:              { min: 8,    max: 14   },
+    lactose_pct:          { min: 3.5,  max: 6    },
+    foreign_milk_pct:     { warn_above: 0.1 },
+    aflatoxin_m1:         { warn_above: 50 },         // EU limit
+    total_bacteria_count: { warn_above: 1500000 },
+    scc:                  { warn_above: 1500000 },
+    clostridia:           { warn_above: 5000 },
+};
+
+function fmtNum(v, digits=2) {
+    if (v === null || v === undefined || v === '') return '—';
+    const n = Number(v);
+    if (Number.isNaN(n)) return v;
+    return n.toLocaleString(undefined, { maximumFractionDigits: digits });
+}
+function fmtInt(v) {
+    if (v === null || v === undefined || v === '') return '—';
+    const n = Number(v);
+    if (Number.isNaN(n)) return v;
+    return n.toLocaleString();
+}
+function rangeClass(field, value) {
+    if (value === null || value === undefined || value === '') return '';
+    const n = Number(value);
+    const r = RANGES[field];
+    if (!r) return '';
+    if (r.warn_above !== undefined && n > r.warn_above) return 'ma-bad';
+    if (r.min !== undefined && (n < r.min || n > r.max)) return 'ma-warn';
+    return '';
+}
+function antibioticsBadge(v) {
+    if (v === true || v === 'true')  return '<span class="badge bg-danger">Positive</span>';
+    if (v === false || v === 'false') return '<span class="badge bg-success">Negative</span>';
+    return '<span class="badge bg-secondary">—</span>';
+}
+function attachmentCell(row) {
+    if (!row.attachment_url) return '<span class="text-muted">—</span>';
+    return `<a href="${row.attachment_url}" target="_blank" title="${row.attachment_name || 'download'}"
+              style="color: var(--green-700);"><i class="bi bi-paperclip"></i></a>`;
+}
+
+// ---------- Detail modal ----------
+function buildDetail(row) {
+    const r = (label, value, cssClass='') =>
+        `<div class="ma-detail-row"><span class="ma-detail-label">${label}</span><span class="ma-detail-value ${cssClass}">${value}</span></div>`;
+
+    let attachmentHtml = '<span class="text-muted">No file attached.</span>';
+    if (row.attachment_url) {
+        attachmentHtml = `<a href="${row.attachment_url}" target="_blank" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-download me-1"></i>${row.attachment_name || 'Download'}
+        </a>`;
+    }
+
+    return `
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="ma-section-title">Metadata</div>
+          ${r('Sampling date', row.sampling_date || '—')}
+          ${r('Analysis date', row.analysis_date || '—')}
+          ${r('Lab', row.lab_name || '—')}
+          ${r('Sample ref', row.sample_ref || '—')}
+          ${r('Uploaded by', row.created_by_username || '—')}
+        </div>
+        <div class="col-md-6">
+          <div class="ma-section-title">Composition (%)</div>
+          ${r('Fat',     fmtNum(row.fat_pct, 3),     rangeClass('fat_pct',     row.fat_pct))}
+          ${r('Protein', fmtNum(row.protein_pct, 3), rangeClass('protein_pct', row.protein_pct))}
+          ${r('SNF (ΣΥΑΛ)', fmtNum(row.snf_pct, 3), rangeClass('snf_pct',     row.snf_pct))}
+          ${r('Lactose', fmtNum(row.lactose_pct, 3), rangeClass('lactose_pct', row.lactose_pct))}
+          ${r('Casein',  fmtNum(row.casein_pct, 3))}
+          ${r('Water',   fmtNum(row.water_pct, 3))}
+        </div>
+        <div class="col-md-6">
+          <div class="ma-section-title">Physical</div>
+          ${r('Freezing point', row.freezing_point !== null && row.freezing_point !== undefined ? row.freezing_point + ' °C' : '—')}
+        </div>
+        <div class="col-md-6">
+          <div class="ma-section-title">Adulteration &amp; contamination</div>
+          ${r('Foreign milk', fmtNum(row.foreign_milk_pct, 3) + ' %', rangeClass('foreign_milk_pct', row.foreign_milk_pct))}
+          ${r('Antibiotics', antibioticsBadge(row.antibiotics_detected))}
+          ${r('Aflatoxin M1', fmtNum(row.aflatoxin_m1, 3) + ' ng/kg', rangeClass('aflatoxin_m1', row.aflatoxin_m1))}
+        </div>
+        <div class="col-md-6">
+          <div class="ma-section-title">Microbiology</div>
+          ${r('ΟΜΧ (TBC)', fmtInt(row.total_bacteria_count) + ' CFU/mL', rangeClass('total_bacteria_count', row.total_bacteria_count))}
+          ${r('SCC',       fmtInt(row.scc) + ' cells/mL',                rangeClass('scc',                  row.scc))}
+          ${r('Clostridia', fmtInt(row.clostridia) + ' spores/L',        rangeClass('clostridia',           row.clostridia))}
+        </div>
+        <div class="col-md-6">
+          <div class="ma-section-title">Attachment</div>
+          <div>${attachmentHtml}</div>
+          <div class="ma-section-title mt-3">Notes</div>
+          <div style="white-space: pre-wrap; font-size: 0.9rem;">${row.notes ? row.notes : '<span class="text-muted">—</span>'}</div>
+        </div>
+      </div>
+    `;
+}
+
+let _detailRow = null;
+
+function openDetail(row) {
+    _detailRow = row;
+    document.getElementById('detail-id').textContent = '#' + row.id;
+    document.getElementById('detail-body').innerHTML = buildDetail(row);
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('detail-modal')).show();
+}
+
+const detailEditBtn = document.getElementById('detail-edit-btn');
+if (detailEditBtn) {
+    detailEditBtn.addEventListener('click', () => {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('detail-modal')).hide();
+        if (_detailRow) openForm(_detailRow);
+    });
+}
+
+// ---------- Form (create/edit) ----------
+{% if can_create %}
+function resetForm() {
+    const f = document.getElementById('ma-form');
+    f.reset();
+    document.getElementById('ma-id').value = '';
+    document.getElementById('current-attachment').innerHTML = '';
+    document.getElementById('form-modal-title').textContent = 'Upload Lab Analysis';
+    document.getElementById('form-submit-label').textContent = 'Save';
+}
+
+function openForm(row) {
+    resetForm();
+    if (!row) {
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('form-modal')).show();
+        return;
+    }
+    document.getElementById('form-modal-title').textContent = 'Edit Lab Analysis #' + row.id;
+    document.getElementById('form-submit-label').textContent = 'Update';
+    document.getElementById('ma-id').value = row.id;
+
+    const set = (id, v) => { document.getElementById(id).value = (v === null || v === undefined) ? '' : v; };
+    set('f-sampling_date', row.sampling_date);
+    set('f-analysis_date', row.analysis_date);
+    set('f-lab_name', row.lab_name);
+    set('f-sample_ref', row.sample_ref);
+    set('f-fat_pct', row.fat_pct);
+    set('f-protein_pct', row.protein_pct);
+    set('f-snf_pct', row.snf_pct);
+    set('f-lactose_pct', row.lactose_pct);
+    set('f-casein_pct', row.casein_pct);
+    set('f-water_pct', row.water_pct);
+    set('f-freezing_point', row.freezing_point);
+    set('f-foreign_milk_pct', row.foreign_milk_pct);
+    set('f-aflatoxin_m1', row.aflatoxin_m1);
+    set('f-total_bacteria_count', row.total_bacteria_count);
+    set('f-scc', row.scc);
+    set('f-clostridia', row.clostridia);
+    set('f-notes', row.notes);
+
+    const ant = document.getElementById('f-antibiotics_detected');
+    ant.value = row.antibiotics_detected === true ? 'true'
+              : row.antibiotics_detected === false ? 'false' : '';
+
+    if (row.attachment_url) {
+        document.getElementById('current-attachment').innerHTML =
+            `Current: <a href="${row.attachment_url}" target="_blank">${row.attachment_name}</a>
+             <span class="text-muted">(upload a new file to replace)</span>`;
+    }
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('form-modal')).show();
+}
+
+document.getElementById('btn-new-analysis').addEventListener('click', () => resetForm());
+
+document.getElementById('ma-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const id = document.getElementById('ma-id').value;
+
+    // Build FormData; drop empty values so DRF treats them as null on PATCH/POST
+    const data = new FormData();
+    form.querySelectorAll('input, select, textarea').forEach(el => {
+        if (!el.name || el.name === 'csrfmiddlewaretoken' || el.name === 'id') return;
+        if (el.type === 'file') {
+            if (el.files.length > 0) data.append(el.name, el.files[0]);
+            return;
+        }
+        const v = el.value;
+        if (v === '' || v === null) return;
+        data.append(el.name, v);
+    });
+
+    const url    = id ? `/api/milk-analysis/${id}/` : '/api/milk-analysis/';
+    const method = id ? 'PUT' : 'POST';
+
+    const resp = await fetch(url, {
+        method,
+        headers: { 'X-CSRFToken': csrfToken },
+        body: data,
+    });
+
+    if (resp.ok) {
+        const saved = await resp.json();
+        table.updateOrAddData([saved]);
+        bootstrap.Modal.getOrCreateInstance(document.getElementById('form-modal')).hide();
+    } else {
+        const err = await resp.json().catch(() => ({}));
+        const msg = typeof err === 'object'
+            ? Object.entries(err).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('\n')
+            : String(err);
+        alert('Save failed:\n' + msg);
+    }
+});
+{% endif %}
+
+// ---------- Tabulator ----------
+var table = new Tabulator("#ma-table", {
+    ajaxURL: "/api/milk-analysis/",
+    layout: "fitColumns",
+    maxHeight: "calc(100vh - 140px)",
+    pagination: "local",
+    paginationSize: 15,
+    paginationCounter: "rows",
+    movableColumns: true,
+    initialSort: [
+        { column: "sampling_date", dir: "desc" },
+    ],
+    columns: [
+        { title: "Sampling Date", field: "sampling_date", sorter: "date", width: 140,
+            headerFilter: "input" },
+        { title: "Lab", field: "lab_name", sorter: "string", headerFilter: "input",
+            formatter: c => c.getValue() || '<span class="text-muted">—</span>' },
+        { title: "Ref", field: "sample_ref", sorter: "string", width: 110,
+            formatter: c => c.getValue() || '<span class="text-muted">—</span>' },
+        { title: "Fat %", field: "fat_pct", sorter: "number", width: 90, hozAlign: "right",
+            formatter: c => fmtNum(c.getValue(), 2) },
+        { title: "Protein %", field: "protein_pct", sorter: "number", width: 100, hozAlign: "right",
+            formatter: c => fmtNum(c.getValue(), 2) },
+        { title: "SCC", field: "scc", sorter: "number", width: 110, hozAlign: "right",
+            formatter: c => fmtInt(c.getValue()) },
+        { title: "ΟΜΧ", field: "total_bacteria_count", sorter: "number", width: 110, hozAlign: "right",
+            formatter: c => fmtInt(c.getValue()) },
+        { title: "Antibiotics", field: "antibiotics_detected", width: 120, hozAlign: "center",
+            headerFilter: "list",
+            headerFilterParams: { values: { "": "All", "true": "Positive", "false": "Negative" } },
+            headerFilterFunc: (filterVal, rowVal) => filterVal === '' || String(rowVal) === filterVal,
+            formatter: c => antibioticsBadge(c.getValue()) },
+        { title: '<i class="bi bi-paperclip"></i>', field: "attachment_url", width: 50,
+            hozAlign: "center", headerSort: false,
+            formatter: c => attachmentCell(c.getRow().getData()) },
+        { title: "", width: 130, hozAlign: "center", headerSort: false,
+            formatter: () => {
+                let html = '<button class="btn btn-sm btn-outline-success me-1" data-act="view" title="View"><i class="bi bi-eye"></i></button>';
+                if (CAN_EDIT)   html += '<button class="btn btn-sm btn-outline-secondary me-1" data-act="edit" title="Edit"><i class="bi bi-pencil"></i></button>';
+                if (CAN_DELETE) html += '<button class="btn btn-sm btn-outline-danger" data-act="delete" title="Delete"><i class="bi bi-trash"></i></button>';
+                return html;
+            },
+            cellClick: async (e, cell) => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                const act = btn.dataset.act;
+                const row = cell.getRow().getData();
+                if (act === 'view')   openDetail(row);
+                if (act === 'edit'   && CAN_EDIT)   openForm(row);
+                if (act === 'delete' && CAN_DELETE) {
+                    if (!confirm(`Delete analysis #${row.id} (${row.sampling_date})?`)) return;
+                    const resp = await fetch(`/api/milk-analysis/${row.id}/`, {
+                        method: 'DELETE',
+                        headers: { 'X-CSRFToken': csrfToken },
+                    });
+                    if (resp.ok) cell.getRow().delete();
+                    else alert('Delete failed.');
+                }
+            }
+        },
+    ],
+    rowClick: (e, row) => {
+        // Open detail when clicking outside the action buttons
+        if (e.target.closest('button') || e.target.closest('a')) return;
+        openDetail(row.getData());
+    },
+});
+</script>
+
+{% endblock %}

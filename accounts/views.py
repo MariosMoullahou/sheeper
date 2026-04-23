@@ -2,7 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .helpers import get_active_farm, set_active_farm, get_user_farms
+from .helpers import get_active_farm, set_active_farm, get_user_farms, get_user_role
+from .models import ROLE_ANALYST
+
+
+def _post_select_redirect(user):
+    """Send analysts straight to milk analysis; everyone else lands on home."""
+    if not user.is_superuser and get_user_role(user) == ROLE_ANALYST:
+        return redirect('milk_analysis')
+    return redirect('homepage')
 
 
 def login_page(request):
@@ -41,13 +49,13 @@ def select_farm(request):
     # Auto-select if only one farm
     if farms.count() == 1:
         set_active_farm(request, farms.first())
-        return redirect('homepage')
+        return _post_select_redirect(request.user)
 
     if request.method == "POST":
         farm_id = request.POST.get("farm_id")
         farm = get_object_or_404(farms, pk=farm_id)
         set_active_farm(request, farm)
-        return redirect('homepage')
+        return _post_select_redirect(request.user)
 
     return render(request, "select_farm.html", {"farms": farms})
 

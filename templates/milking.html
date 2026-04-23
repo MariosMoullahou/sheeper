@@ -106,8 +106,8 @@ async function inlineEdit(cell, apiBase) {
 
 var table = new Tabulator("#milk-table", {
     ajaxURL: "/api/milk/",
-    layout: "fitDataFill",
-    height: "520px",
+    layout: "fitColumns",
+    maxHeight: "calc(100vh - 140px)",
     addRowPos: "top",
     pagination: "local",
     paginationSize: 15,

@@ -81,10 +81,10 @@
         </li>
         {% endif %}
 
-        {% if user_role == 'analyst' or user_role == 'manager' or request.user.is_superuser %}
+        {% if user_role == 'farmer' or user_role == 'analyst' or user_role == 'manager' or request.user.is_superuser %}
         <li class="nav-item">
             <a class="nav-link {% if request.resolver_match.url_name == 'milk_analysis' %}active{% endif %}"
-               href="{% url 'homepage' %}">
+               href="{% url 'milk_analysis' %}">
                 <i class="bi bi-clipboard2-data-fill me-2"></i> Milk Analysis
             </a>
         </li>

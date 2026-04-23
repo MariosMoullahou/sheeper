@@ -1,5 +1,6 @@
+from django.conf import settings
 from rest_framework import serializers
-from .models import Milk, Sheep, BirthEvent, HealthRecord, CalendarEvent
+from .models import Milk, Sheep, BirthEvent, HealthRecord, CalendarEvent, MilkAnalysis
 
 
 class MilkSerializer(serializers.ModelSerializer):
@@ -240,3 +241,62 @@ class CalendarEventSerializer(serializers.ModelSerializer):
     class Meta:
         model = CalendarEvent
         fields = ["id", "title", "start", "end", "group_id", "color", "farm_name"]
+
+
+class MilkAnalysisSerializer(serializers.ModelSerializer):
+    attachment_url = serializers.SerializerMethodField()
+    attachment_name = serializers.SerializerMethodField()
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = MilkAnalysis
+        fields = [
+            "id",
+            "sampling_date", "analysis_date", "lab_name", "sample_ref",
+            "protein_pct", "fat_pct", "snf_pct", "lactose_pct", "casein_pct", "water_pct",
+            "freezing_point",
+            "foreign_milk_pct", "antibiotics_detected", "aflatoxin_m1",
+            "total_bacteria_count", "scc", "clostridia",
+            "attachment", "attachment_url", "attachment_name",
+            "notes",
+            "created_by_username", "created_at", "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+        extra_kwargs = {"attachment": {"write_only": True, "required": False}}
+
+    def get_attachment_url(self, obj):
+        if not obj.attachment:
+            return None
+        request = self.context.get('request')
+        url = obj.attachment.url
+        return request.build_absolute_uri(url) if request else url
+
+    def get_attachment_name(self, obj):
+        if not obj.attachment:
+            return None
+        return obj.attachment.name.rsplit('/', 1)[-1]
+
+    def validate_attachment(self, file):
+        if file is None:
+            return file
+        max_bytes = settings.MILK_ANALYSIS_MAX_UPLOAD_MB * 1024 * 1024
+        if file.size > max_bytes:
+            raise serializers.ValidationError(
+                f"File too large (max {settings.MILK_ANALYSIS_MAX_UPLOAD_MB} MB)."
+            )
+        ext = file.name.rsplit('.', 1)[-1].lower() if '.' in file.name else ''
+        if ext not in settings.MILK_ANALYSIS_ALLOWED_EXTENSIONS:
+            raise serializers.ValidationError(
+                f"File type '.{ext}' not allowed. Allowed: "
+                + ", ".join(settings.MILK_ANALYSIS_ALLOWED_EXTENSIONS)
+            )
+        return file
+
+    def validate(self, data):
+        sampling = data.get('sampling_date') or getattr(self.instance, 'sampling_date', None)
+        analysis = data.get('analysis_date') or getattr(self.instance, 'analysis_date', None)
+        if sampling and analysis and analysis < sampling:
+            raise serializers.ValidationError({
+                'analysis_date': 'Analysis date cannot be before sampling date.'
+            })
+        return data

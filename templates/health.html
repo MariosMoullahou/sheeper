@@ -181,8 +181,8 @@ var table = new Tabulator("#health-table", {
         updateTypeSuggestions(response);
         return response;
     },
-    layout: "fitDataFill",
-    height: "520px",
+    layout: "fitColumns",
+    maxHeight: "calc(100vh - 140px)",
     addRowPos: "top",
     pagination: "local",
     paginationSize: 15,
