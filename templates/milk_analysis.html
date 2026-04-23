@@ -27,6 +27,9 @@
 .ma-warn { color: #b45309; }
 .ma-bad  { color: #b91c1c; }
 .unit-hint { color: #94a3b8; font-size: 0.78rem; margin-left: 4px; }
+.gr-label  { color: #6b7280; font-size: 0.78rem; font-style: italic; margin-left: 4px; font-weight: 400; }
+.gr-label::before { content: "("; }
+.gr-label::after  { content: ")"; }
 </style>
 
 <!-- ============================== -->
@@ -74,19 +77,19 @@
           <div class="ma-section-title">Sample metadata</div>
           <div class="row g-3 mb-4">
             <div class="col-md-3">
-              <label for="f-sampling_date" class="form-label">Sampling date <span class="text-danger">*</span></label>
+              <label for="f-sampling_date" class="form-label">Sampling date <span class="gr-label">ημ/νία δειγματοληψίας</span> <span class="text-danger">*</span></label>
               <input id="f-sampling_date" name="sampling_date" type="date" class="form-control" required>
             </div>
             <div class="col-md-3">
-              <label for="f-analysis_date" class="form-label">Analysis date</label>
+              <label for="f-analysis_date" class="form-label">Analysis date <span class="gr-label">ημ/νία ανάλυσης</span></label>
               <input id="f-analysis_date" name="analysis_date" type="date" class="form-control">
             </div>
             <div class="col-md-3">
-              <label for="f-lab_name" class="form-label">Lab name</label>
+              <label for="f-lab_name" class="form-label">Lab name <span class="gr-label">εργαστήριο</span></label>
               <input id="f-lab_name" name="lab_name" type="text" class="form-control" placeholder="e.g. ΕΛΟΓΑΚ">
             </div>
             <div class="col-md-3">
-              <label for="f-sample_ref" class="form-label">Sample ref</label>
+              <label for="f-sample_ref" class="form-label">Sample ref <span class="gr-label">κωδικός δείγματος</span></label>
               <input id="f-sample_ref" name="sample_ref" type="text" class="form-control" placeholder="Lab reference">
             </div>
           </div>
@@ -95,27 +98,27 @@
           <div class="ma-section-title">Composition</div>
           <div class="row g-3 mb-4">
             <div class="col-md-2">
-              <label for="f-fat_pct" class="form-label">Fat<span class="unit-hint">%</span></label>
+              <label for="f-fat_pct" class="form-label">Fat <span class="gr-label">λιπαρά</span><span class="unit-hint">%</span></label>
               <input id="f-fat_pct" name="fat_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-2">
-              <label for="f-protein_pct" class="form-label">Protein<span class="unit-hint">%</span></label>
+              <label for="f-protein_pct" class="form-label">Protein <span class="gr-label">πρωτεΐνη</span><span class="unit-hint">%</span></label>
               <input id="f-protein_pct" name="protein_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-2">
-              <label for="f-snf_pct" class="form-label">SNF (ΣΥΑΛ)<span class="unit-hint">%</span></label>
+              <label for="f-snf_pct" class="form-label">SNF <span class="gr-label">ΣΥΑΛ</span><span class="unit-hint">%</span></label>
               <input id="f-snf_pct" name="snf_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-2">
-              <label for="f-lactose_pct" class="form-label">Lactose<span class="unit-hint">%</span></label>
+              <label for="f-lactose_pct" class="form-label">Lactose <span class="gr-label">λακτόζη</span><span class="unit-hint">%</span></label>
               <input id="f-lactose_pct" name="lactose_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-2">
-              <label for="f-casein_pct" class="form-label">Casein<span class="unit-hint">%</span></label>
+              <label for="f-casein_pct" class="form-label">Casein <span class="gr-label">καζεΐνη</span><span class="unit-hint">%</span></label>
               <input id="f-casein_pct" name="casein_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-2">
-              <label for="f-water_pct" class="form-label">Water<span class="unit-hint">%</span></label>
+              <label for="f-water_pct" class="form-label">Water <span class="gr-label">νερό</span><span class="unit-hint">%</span></label>
               <input id="f-water_pct" name="water_pct" type="number" step="0.001" class="form-control">
             </div>
           </div>
@@ -124,7 +127,7 @@
           <div class="ma-section-title">Physical</div>
           <div class="row g-3 mb-4">
             <div class="col-md-3">
-              <label for="f-freezing_point" class="form-label">Freezing point<span class="unit-hint">°C</span></label>
+              <label for="f-freezing_point" class="form-label">Freezing point <span class="gr-label">κρυοσκοπικό σημείο</span><span class="unit-hint">°C</span></label>
               <input id="f-freezing_point" name="freezing_point" type="number" step="0.0001" class="form-control" placeholder="e.g. -0.545">
             </div>
           </div>
@@ -133,11 +136,11 @@
           <div class="ma-section-title">Adulteration &amp; contamination</div>
           <div class="row g-3 mb-4">
             <div class="col-md-3">
-              <label for="f-foreign_milk_pct" class="form-label">Foreign milk (cow/goat)<span class="unit-hint">%</span></label>
+              <label for="f-foreign_milk_pct" class="form-label">Foreign milk (cow/goat) <span class="gr-label">γίδινο/αγελαδινό σε πρόβειο</span><span class="unit-hint">%</span></label>
               <input id="f-foreign_milk_pct" name="foreign_milk_pct" type="number" step="0.001" class="form-control">
             </div>
             <div class="col-md-3">
-              <label for="f-antibiotics_detected" class="form-label">Antibiotics</label>
+              <label for="f-antibiotics_detected" class="form-label">Antibiotics <span class="gr-label">αντιβιοτικά</span></label>
               <select id="f-antibiotics_detected" name="antibiotics_detected" class="form-select">
                 <option value="">Not tested</option>
                 <option value="false">Negative</option>
@@ -145,7 +148,7 @@
               </select>
             </div>
             <div class="col-md-3">
-              <label for="f-aflatoxin_m1" class="form-label">Aflatoxin M1<span class="unit-hint">ng/kg</span></label>
+              <label for="f-aflatoxin_m1" class="form-label">Aflatoxin M1 <span class="gr-label">αφλατοξίνη Μ1</span><span class="unit-hint">ng/kg</span></label>
               <input id="f-aflatoxin_m1" name="aflatoxin_m1" type="number" step="0.001" class="form-control">
             </div>
           </div>
@@ -154,15 +157,15 @@
           <div class="ma-section-title">Microbiology</div>
           <div class="row g-3 mb-4">
             <div class="col-md-3">
-              <label for="f-total_bacteria_count" class="form-label">ΟΜΧ (TBC)<span class="unit-hint">CFU/mL</span></label>
+              <label for="f-total_bacteria_count" class="form-label">TBC <span class="gr-label">ΟΜΧ</span><span class="unit-hint">CFU/mL</span></label>
               <input id="f-total_bacteria_count" name="total_bacteria_count" type="number" step="1" class="form-control">
             </div>
             <div class="col-md-3">
-              <label for="f-scc" class="form-label">SCC<span class="unit-hint">cells/mL</span></label>
+              <label for="f-scc" class="form-label">SCC <span class="gr-label">σωματικά κύτταρα</span><span class="unit-hint">cells/mL</span></label>
               <input id="f-scc" name="scc" type="number" step="1" class="form-control">
             </div>
             <div class="col-md-3">
-              <label for="f-clostridia" class="form-label">Clostridia<span class="unit-hint">spores/L</span></label>
+              <label for="f-clostridia" class="form-label">Clostridia <span class="gr-label">κλωστρίδια</span><span class="unit-hint">spores/L</span></label>
               <input id="f-clostridia" name="clostridia" type="number" step="1" class="form-control">
             </div>
           </div>
@@ -171,14 +174,14 @@
           <div class="ma-section-title">Attachment &amp; notes</div>
           <div class="row g-3 mb-2">
             <div class="col-md-6">
-              <label for="f-attachment" class="form-label">Lab report file</label>
+              <label for="f-attachment" class="form-label">Lab report file <span class="gr-label">αρχείο ανάλυσης</span></label>
               <input id="f-attachment" name="attachment" type="file" class="form-control"
                      accept=".pdf,.xlsx,.xls,.jpg,.jpeg,.png">
               <small class="text-muted">PDF, Excel, or image. Max 10 MB.</small>
               <div id="current-attachment" class="mt-1 small"></div>
             </div>
             <div class="col-md-6">
-              <label for="f-notes" class="form-label">Notes</label>
+              <label for="f-notes" class="form-label">Notes <span class="gr-label">σημειώσεις</span></label>
               <textarea id="f-notes" name="notes" class="form-control" rows="2"></textarea>
             </div>
           </div>
@@ -270,6 +273,7 @@ function attachmentCell(row) {
 
 // ---------- Detail modal ----------
 function buildDetail(row) {
+    const lbl = (en, gr) => `${en} <span class="gr-label">${gr}</span>`;
     const r = (label, value, cssClass='') =>
         `<div class="ma-detail-row"><span class="ma-detail-label">${label}</span><span class="ma-detail-value ${cssClass}">${value}</span></div>`;
 
@@ -284,41 +288,41 @@ function buildDetail(row) {
       <div class="row g-4">
         <div class="col-md-6">
           <div class="ma-section-title">Metadata</div>
-          ${r('Sampling date', row.sampling_date || '—')}
-          ${r('Analysis date', row.analysis_date || '—')}
-          ${r('Lab', row.lab_name || '—')}
-          ${r('Sample ref', row.sample_ref || '—')}
+          ${r(lbl('Sampling date', 'ημ/νία δειγματοληψίας'), row.sampling_date || '—')}
+          ${r(lbl('Analysis date', 'ημ/νία ανάλυσης'),       row.analysis_date || '—')}
+          ${r(lbl('Lab',           'εργαστήριο'),            row.lab_name || '—')}
+          ${r(lbl('Sample ref',    'κωδικός δείγματος'),     row.sample_ref || '—')}
           ${r('Uploaded by', row.created_by_username || '—')}
         </div>
         <div class="col-md-6">
           <div class="ma-section-title">Composition (%)</div>
-          ${r('Fat',     fmtNum(row.fat_pct, 3),     rangeClass('fat_pct',     row.fat_pct))}
-          ${r('Protein', fmtNum(row.protein_pct, 3), rangeClass('protein_pct', row.protein_pct))}
-          ${r('SNF (ΣΥΑΛ)', fmtNum(row.snf_pct, 3), rangeClass('snf_pct',     row.snf_pct))}
-          ${r('Lactose', fmtNum(row.lactose_pct, 3), rangeClass('lactose_pct', row.lactose_pct))}
-          ${r('Casein',  fmtNum(row.casein_pct, 3))}
-          ${r('Water',   fmtNum(row.water_pct, 3))}
+          ${r(lbl('Fat',     'λιπαρά'),    fmtNum(row.fat_pct, 3),     rangeClass('fat_pct',     row.fat_pct))}
+          ${r(lbl('Protein', 'πρωτεΐνη'),  fmtNum(row.protein_pct, 3), rangeClass('protein_pct', row.protein_pct))}
+          ${r(lbl('SNF',     'ΣΥΑΛ'),      fmtNum(row.snf_pct, 3),     rangeClass('snf_pct',     row.snf_pct))}
+          ${r(lbl('Lactose', 'λακτόζη'),   fmtNum(row.lactose_pct, 3), rangeClass('lactose_pct', row.lactose_pct))}
+          ${r(lbl('Casein',  'καζεΐνη'),   fmtNum(row.casein_pct, 3))}
+          ${r(lbl('Water',   'νερό'),      fmtNum(row.water_pct, 3))}
         </div>
         <div class="col-md-6">
           <div class="ma-section-title">Physical</div>
-          ${r('Freezing point', row.freezing_point !== null && row.freezing_point !== undefined ? row.freezing_point + ' °C' : '—')}
+          ${r(lbl('Freezing point', 'κρυοσκοπικό σημείο'), row.freezing_point !== null && row.freezing_point !== undefined ? row.freezing_point + ' °C' : '—')}
         </div>
         <div class="col-md-6">
           <div class="ma-section-title">Adulteration &amp; contamination</div>
-          ${r('Foreign milk', fmtNum(row.foreign_milk_pct, 3) + ' %', rangeClass('foreign_milk_pct', row.foreign_milk_pct))}
-          ${r('Antibiotics', antibioticsBadge(row.antibiotics_detected))}
-          ${r('Aflatoxin M1', fmtNum(row.aflatoxin_m1, 3) + ' ng/kg', rangeClass('aflatoxin_m1', row.aflatoxin_m1))}
+          ${r(lbl('Foreign milk', 'γίδινο/αγελαδινό σε πρόβειο'), fmtNum(row.foreign_milk_pct, 3) + ' %', rangeClass('foreign_milk_pct', row.foreign_milk_pct))}
+          ${r(lbl('Antibiotics',  'αντιβιοτικά'),                 antibioticsBadge(row.antibiotics_detected))}
+          ${r(lbl('Aflatoxin M1', 'αφλατοξίνη Μ1'),               fmtNum(row.aflatoxin_m1, 3) + ' ng/kg', rangeClass('aflatoxin_m1', row.aflatoxin_m1))}
         </div>
         <div class="col-md-6">
           <div class="ma-section-title">Microbiology</div>
-          ${r('ΟΜΧ (TBC)', fmtInt(row.total_bacteria_count) + ' CFU/mL', rangeClass('total_bacteria_count', row.total_bacteria_count))}
-          ${r('SCC',       fmtInt(row.scc) + ' cells/mL',                rangeClass('scc',                  row.scc))}
-          ${r('Clostridia', fmtInt(row.clostridia) + ' spores/L',        rangeClass('clostridia',           row.clostridia))}
+          ${r(lbl('TBC',        'ΟΜΧ'),               fmtInt(row.total_bacteria_count) + ' CFU/mL', rangeClass('total_bacteria_count', row.total_bacteria_count))}
+          ${r(lbl('SCC',        'σωματικά κύτταρα'),  fmtInt(row.scc) + ' cells/mL',                rangeClass('scc',                  row.scc))}
+          ${r(lbl('Clostridia', 'κλωστρίδια'),        fmtInt(row.clostridia) + ' spores/L',         rangeClass('clostridia',           row.clostridia))}
         </div>
         <div class="col-md-6">
-          <div class="ma-section-title">Attachment</div>
+          <div class="ma-section-title">Attachment <span class="gr-label">αρχείο ανάλυσης</span></div>
           <div>${attachmentHtml}</div>
-          <div class="ma-section-title mt-3">Notes</div>
+          <div class="ma-section-title mt-3">Notes <span class="gr-label">σημειώσεις</span></div>
           <div style="white-space: pre-wrap; font-size: 0.9rem;">${row.notes ? row.notes : '<span class="text-muted">—</span>'}</div>
         </div>
       </div>
